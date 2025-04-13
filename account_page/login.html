@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🍳 Login Page</title>
+</head>
+
+<body>
+  <h1>🍳 Login to View Your Recipes</h1>
+
+  <form action="/login" method="POST">
+    <div>
+      <label for="username">Username or Email Address</label><br />
+      <input type="text" id="username" name="username" required />
+    </div>
+
+    <div>
+      <label for="password">Password</label><br />
+      <input type="password" id="password" name="password" required />
+    </div>
+
+    <div>
+      <input type="checkbox" id="remember" name="remember" />
+      <label for="remember">Remember me</label>
+    </div>
+
+    <div>
+      <button type="submit">Log in</button>
+    </div>
+  </form>
+
+  <p>
+    <a href="/forgot-password">Forgot password?</a>
+  </p>
+  
+  <p>
+    New to our page? Welcome, click here to <a href="/register">Create an account</a>
+  </p>
+</body>
+</html>
