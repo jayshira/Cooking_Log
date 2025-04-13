@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Account</title>
+</head>
+
+<body>
+  <h1>🍳 Create your account</h1>
+
+  <form action="/register" method="POST">
+    <div>
+      <label for="username">Username</label><br>
+      <input type="text" id="username" name="username" required>
+    </div>
+
+    <div>
+      <label for="email">Email Address</label><br>
+      <input type="email" id="email" name="email" required>
+    </div>
+
+    <div>
+      <label for="password">Password</label><br>
+      <input type="password" id="password" name="password" required>
+    </div>
+
+    <div>
+      <label for="confirm">Confirm Password</label><br>
+      <input type="password" id="confirm" name="confirm" required>
+    </div>
+
+    <div>
+      <button type="submit">Register</button>
+    </div>
+  </form>
+
+  <p>
+    Already have an account? <a href="./login.html">Sign in</a>
+  </p>
+</body>
+</html>
