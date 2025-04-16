@@ -54,3 +54,91 @@ KitchenLog is a web application that allows users to:
   - Flask-Login for managing user authentication
   - AJAX/WebSockets for asynchronous data exchange
   - SQLite managed via SQLAlchemy as the database
+ 
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+- Python (version 3.8 or higher recommended)
+- `pip` (Python package installer, usually included with Python)
+- Git (for cloning the repository)
+
+## Setup Instructions
+
+Follow these steps to set up the project locally:
+
+1.  **Clone the Repository:**
+    ```bash
+    git clone <your-repository-url> # Replace with your actual repository URL
+    cd KitchenLog # Or your repository's folder name
+    ```
+
+2.  **Create and Activate a Virtual Environment:**
+    It's highly recommended to use a virtual environment to manage project dependencies.
+
+    ```bash
+    # Create the virtual environment (use 'python3' if 'python' links to Python 2)
+    python -m venv env
+
+    # Activate the virtual environment:
+    # On macOS/Linux (bash/zsh):
+    source env/bin/activate
+    # On Windows (Command Prompt):
+    # .\env\Scripts\activate
+    # On Windows (PowerShell):
+    # .\env\Scripts\Activate.ps1
+    ```
+    Your terminal prompt should now show `(env)` at the beginning.
+
+3.  **Install Dependencies:**
+    Install all the required Python packages listed in `requirements.txt`. Make sure your virtual environment is active before running this command.
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Database Setup:**
+    The application uses SQLite. The database file (`recipes.db`) and the necessary tables (`User`, `Recipe`) will be automatically created in the project's root directory the first time you run the application, thanks to the `db.create_all()` command within the app factory (`app/__init__.py`).
+    *(Note: For more complex database changes later, integrating Flask-Migrate is recommended.)*
+
+## Running the Application
+
+1.  **Ensure Virtual Environment is Active:**
+    If you haven't already, activate the virtual environment:
+    ```bash
+    source env/bin/activate # Or your OS equivalent
+    ```
+
+2.  **Start the Flask Development Server:**
+    Run the `run.py` script from the project's root directory:
+    ```bash
+    python run.py
+    ```
+
+3.  **Access the Application:**
+    Open your web browser and navigate to:
+    [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
+    (Or `http://localhost:5000/`)
+
+    You should see the KitchenLog homepage. You can now sign up for an account and log in.
+## Project Structure
+/KitchenLog/
+|-- run.py # Script to start the Flask app
+|-- config.py # Configuration settings
+|-- requirements.txt # Python dependencies
+|-- recipes.db # SQLite database file
+|-- env/ # Virtual environment folder
+|-- app/ # Main Flask application package
+| |-- init.py # App factory (create_app)
+| |-- models.py # SQLAlchemy database models
+| |-- routes.py # Main application routes (Blueprint: main)
+| |-- auth.py # Authentication routes (Blueprint: auth)
+| |-- static/ # Static files (CSS, JS, images)
+| | |-- style.css
+| | -- script.js | -- templates/ # Jinja2 HTML templates
+| |-- index.html
+| -- auth/ | |-- login.html | -- signup.html
+|-- README.md # This file
+`-- LICENSE # (Optional) License file
+      
+---
+
+Happy Cooking!
