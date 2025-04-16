@@ -98,7 +98,6 @@ Follow these steps to set up the project locally:
 4.  **Database Setup:**
     The application uses SQLite. The database file (`recipes.db`) and the necessary tables (`User`, `Recipe`) will be automatically created in the project's root directory the first time you run the application, thanks to the `db.create_all()` command within the app factory (`app/__init__.py`).
     *(Note: For more complex database changes later, integrating Flask-Migrate is recommended.)*
-
 ## Running the Application
 
 1.  **Ensure Virtual Environment is Active:**
@@ -119,27 +118,29 @@ Follow these steps to set up the project locally:
     (Or `http://localhost:5000/`)
 
     You should see the KitchenLog homepage. You can now sign up for an account and log in.
+
 ## Project Structure
+
+```text
 KitchenLog/
 ├── app/
-│ ├── static/
-│ │ ├── script.js
-│ │ └── style.css
-│ ├── templates/
-│ │ ├── auth/
-│ │ │ ├── login.html
-│ │ │ └── signup.html
-│ │ └── index.html
-│ ├── init.py # Application Factory
-│ ├── auth.py # Authentication routes (auth blueprint)
-│ ├── models.py # Database models
-│ └── routes.py # Main application routes (main blueprint)
-├── env/ # Virtual environment directory
-├── config.py # Configuration settings
-├── recipes.db # SQLite database file
-├── requirements.txt # Python dependencies
-├── run.py # Script to run the Flask application
-├── README.md # This file
-└── LICENSE # (Optional) License file
+│   ├── static/
+│   │   ├── script.js
+│   │   └── style.css
+│   ├── templates/
+│   │   ├── auth/
+│   │   │   ├── login.html
+│   │   │   └── signup.html
+│   │   └── index.html
+│   ├── __init__.py     # Application Factory
+│   ├── auth.py         # Authentication routes (auth blueprint)
+│   ├── models.py       # Database models
+│   └── routes.py       # Main application routes (main blueprint)
+├── env/                # Virtual environment directory
+├── config.py           # Configuration settings
+├── recipes.db          # SQLite database file
+├── requirements.txt    # Python dependencies
+├── run.py              # Script to run the Flask application
+├── README.md           # This file
+└── LICENSE             # (Optional) License file
 
-Happy Cooking!
