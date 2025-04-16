@@ -120,25 +120,26 @@ Follow these steps to set up the project locally:
 
     You should see the KitchenLog homepage. You can now sign up for an account and log in.
 ## Project Structure
-/KitchenLog/
-|-- run.py # Script to start the Flask app
-|-- config.py # Configuration settings
-|-- requirements.txt # Python dependencies
-|-- recipes.db # SQLite database file
-|-- env/ # Virtual environment folder
-|-- app/ # Main Flask application package
-| |-- init.py # App factory (create_app)
-| |-- models.py # SQLAlchemy database models
-| |-- routes.py # Main application routes (Blueprint: main)
-| |-- auth.py # Authentication routes (Blueprint: auth)
-| |-- static/ # Static files (CSS, JS, images)
-| | |-- style.css
-| | -- script.js | -- templates/ # Jinja2 HTML templates
-| |-- index.html
-| -- auth/ | |-- login.html | -- signup.html
-|-- README.md # This file
-`-- LICENSE # (Optional) License file
-      
----
+KitchenLog/
+├── app/
+│ ├── static/
+│ │ ├── script.js
+│ │ └── style.css
+│ ├── templates/
+│ │ ├── auth/
+│ │ │ ├── login.html
+│ │ │ └── signup.html
+│ │ └── index.html
+│ ├── init.py # Application Factory
+│ ├── auth.py # Authentication routes (auth blueprint)
+│ ├── models.py # Database models
+│ └── routes.py # Main application routes (main blueprint)
+├── env/ # Virtual environment directory
+├── config.py # Configuration settings
+├── recipes.db # SQLite database file
+├── requirements.txt # Python dependencies
+├── run.py # Script to run the Flask application
+├── README.md # This file
+└── LICENSE # (Optional) License file
 
 Happy Cooking!
