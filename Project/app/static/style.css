@@ -1,0 +1,511 @@
+/* CSS Styles */
+:root {
+    --primary-color: #FF7B54;
+    --secondary-color: #FFB26B;
+    --light-color: #FFD56F;
+    --accent-color: #939B62;
+    --dark-color: #2C2C2C;
+    --bg-light: #f9f9f9;
+    --white: #ffffff;
+    --grey: #666;
+    --light-grey: #ddd;
+    --success-color: #4CAF50;
+    --danger-color: #f44336;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--bg-light);
+    color: var(--dark-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    background-color: var(--primary-color);
+    color: var(--white);
+    padding: 20px 0;
+    text-align: center;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+h2 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    border-bottom: 2px solid var(--light-color);
+    padding-bottom: 10px;
+    font-size: 1.8rem;
+}
+
+h3 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: var(--dark-color);
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+/* --- START: Alert Styles --- */
+.alert {
+    padding: 12px 15px; /* Slightly adjusted padding */
+    margin-bottom: 15px;
+    border: 1px solid transparent; /* Add a base border */
+    border-radius: 5px; /* Consistent border radius */
+    font-size: 0.95rem; /* Slightly adjust font size */
+    opacity: 0.95; /* Slight transparency can look nice */
+}
+
+.alert-heading { /* Optional: For adding headings within alerts */
+    color: inherit;
+    font-weight: bold;
+}
+
+/* Specific styles for each category */
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+/* Add styles for other potential categories if needed (e.g., primary, secondary) */
+/*
+.alert-primary { color: #004085; background-color: #cce5ff; border-color: #b8daff; }
+.alert-secondary { color: #383d41; background-color: #e2e3e5; border-color: #d6d8db; }
+*/
+/* --- END: Alert Styles --- */
+
+
+/* --- Existing CSS rules continue --- */
+/* ... (rest of your styles) ... */
+
+/* --- Add style for disabled tabs (if not already present) --- */
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    background-color: var(--white);
+    border-radius: 50px;
+    padding: 5px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    flex-wrap: wrap; /* Allow tabs to wrap on smaller screens */
+}
+
+.tab {
+    padding: 12px 25px;
+    cursor: pointer;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    color: var(--dark-color);
+    background-color: transparent;
+    border: none;
+    font-size: 1rem;
+    margin: 5px; /* Add margin for wrapped tabs */
+}
+
+.tab:hover {
+    background-color: rgba(255, 123, 84, 0.1);
+}
+
+.tab.active {
+    background-color: var(--primary-color);
+    color: var(--white);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+.tab.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    color: var(--grey); /* Make text grey */
+    background-color: transparent; /* Ensure no background hover effect */
+}
+.tab.disabled:hover {
+     background-color: transparent; /* Prevent hover background */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card {
+    background-color: var(--white);
+    border-radius: 10px;
+    padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--light-grey);
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus, textarea:focus, select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 123, 84, 0.2);
+}
+
+textarea {
+    min-height: 150px;
+    resize: vertical;
+}
+
+.btn {
+    background-color: var(--primary-color);
+    color: var(--white);
+    border: none;
+    padding: 12px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+    gap: 8px; /* Space between icon and text */
+}
+
+.btn:hover {
+    background-color: #e66a45; /* Slightly darker shade */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary {
+    background-color: var(--accent-color);
+}
+
+.btn-secondary:hover {
+    background-color: #7f8852; /* Slightly darker shade */
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+}
+.btn-danger:hover {
+    background-color: #d32f2f;
+}
+
+
+.recipe-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.recipe-card {
+    background-color: var(--white);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.recipe-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.recipe-img {
+    height: 200px;
+    background-color: var(--light-color); /* Fallback color */
+    background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); /* Default gradient */
+    background-size: cover;
+    background-position: center;
+    border-bottom: 3px solid var(--primary-color);
+}
+
+.recipe-info {
+    padding: 20px;
+    flex-grow: 1; /* Allow info section to grow */
+    display: flex;
+    flex-direction: column;
+}
+
+.recipe-title {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+    line-height: 1.3;
+}
+
+.recipe-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    color: var(--grey);
+    font-size: 0.9rem;
+    flex-wrap: wrap; /* Wrap if needed */
+}
+
+.recipe-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.recipe-meta .category-icon { color: var(--accent-color); }
+.recipe-meta .time-icon { color: var(--secondary-color); }
+
+
+.recipe-ingredients-preview {
+    margin-bottom: 15px;
+    color: var(--grey);
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.recipe-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto; /* Push actions to the bottom */
+    flex-wrap: wrap; /* Wrap buttons if needed */
+}
+
+.recipe-actions .btn {
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Smaller min width */
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.stat-card {
+    background-color: var(--white);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid var(--primary-color); /* Accent border */
+}
+
+.stat-value {
+    font-size: 2.2rem; /* Slightly smaller */
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 5px 0;
+}
+
+.stat-label {
+    color: var(--grey);
+    font-size: 0.9rem; /* Slightly smaller */
+}
+
+.chart-container {
+    height: 350px; /* Increased height */
+    margin-top: 20px;
+    position: relative; /* Needed for Chart.js responsiveness */
+}
+
+.share-options {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.share-btn {
+    display: inline-flex; /* Use inline-flex for button */
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: none; /* Ensure it looks like a button */
+    background-color: #f0f0f0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.share-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    opacity: 0.9;
+}
+
+.facebook { color: #1877F2; }
+.twitter { color: #1DA1F2; }
+.whatsapp { color: #25D366; }
+.email { color: var(--dark-color); }
+.facebook:hover { background-color: #e7f3ff; }
+.twitter:hover { background-color: #e8f5fe; }
+.whatsapp:hover { background-color: #e9fdee; }
+.email:hover { background-color: #eee; }
+
+
+.file-upload {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center; /* Center content vertically */
+    padding: 30px 20px; /* Adjusted padding */
+    border: 2px dashed var(--light-grey);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 5px; /* Reduced margin */
+    text-align: center;
+    background-color: #fafafa;
+}
+
+.file-upload:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(255, 123, 84, 0.05);
+}
+
+.file-upload i {
+    font-size: 2rem; /* Slightly smaller icon */
+    color: var(--primary-color);
+    margin-bottom: 10px; /* Reduced margin */
+}
+
+.file-upload p {
+    font-size: 0.95rem;
+    color: var(--grey);
+}
+
+.file-upload input[type="file"] {
+    display: none; /* Hide the actual input */
+}
+
+#file-upload-status {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: var(--grey);
+}
+#file-upload-status i {
+    margin-right: 5px;
+}
+#file-upload-status .success {
+    color: var(--success-color);
+}
+
+
+.search-bar {
+    margin-bottom: 20px;
+}
+
+.search-bar input {
+    padding: 12px 15px;
+    font-size: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    h1 { font-size: 2rem; }
+    .subtitle { font-size: 1rem; }
+
+    .tabs { padding: 5px 10px; } /* Adjust padding */
+    .tab { padding: 10px 15px; font-size: 0.9rem; }
+
+    .recipe-list {
+        grid-template-columns: 1fr; /* Single column on smaller screens */
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Adjust for smaller stat cards */
+        gap: 15px;
+    }
+     .stat-value { font-size: 1.8rem; }
+     .stat-label { font-size: 0.85rem; }
+
+    .share-options {
+        gap: 10px;
+    }
+    .share-btn {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+
+    .card { padding: 20px; }
+    h2 { font-size: 1.5rem; }
+}
+
+@media (max-width: 480px) {
+    .container { padding: 15px; }
+    header { padding: 15px 0; }
+    h1 { font-size: 1.8rem; }
+
+    .tabs { justify-content: flex-start; } /* Align tabs left if they wrap */
+
+    .stats-grid {
+        grid-template-columns: 1fr; /* Stack stat cards */
+    }
+
+    .recipe-actions { justify-content: center; } /* Center buttons */
+
+    .btn { padding: 10px 20px; font-size: 15px; }
+    .recipe-actions .btn { padding: 8px 12px; font-size: 13px; }
+}
