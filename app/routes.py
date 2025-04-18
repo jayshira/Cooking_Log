@@ -10,8 +10,14 @@ main = Blueprint('main', __name__)
 # --- HTML Page Routes ---
 @main.route('/')
 def index():
+    return render_template('index.html', title='Main Page')
+
+# --- Seperate Home Page before login/signup ---
+@main.route('/home')
+@login_required
+def home():
     # Add logic to show login/signup or logout/dashboard links based on auth status
-    return render_template('index.html', current_user=current_user)
+    return render_template('home.html', current_user=current_user)
 
 # --- API Routes ---
 @main.route('/api/recipes', methods=['GET'])
