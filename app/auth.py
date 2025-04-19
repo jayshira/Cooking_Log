@@ -10,7 +10,7 @@ auth = Blueprint('auth', __name__)
 def signup():
     """Handles user signup."""
     if current_user.is_authenticated:
-        return redirect(url_for('main.index')) # Redirect if already logged in
+        return redirect(url_for('main.home')) # Redirect if already logged in
 
     if request.method == 'POST':
         username = request.form.get('username')
@@ -55,7 +55,7 @@ def signup():
 def login():
     """Handles user login."""
     if current_user.is_authenticated:
-        return redirect(url_for('main.index')) # Redirect if already logged in
+        return redirect(url_for('main.home')) # Redirect if already logged in
 
     if request.method == 'POST':
         username = request.form.get('username') # Can use username or email to login
@@ -75,7 +75,7 @@ def login():
             flash(f'Welcome back, {user.username}!', 'success')
             # Redirect to the page they were trying to access, or main index
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('main.index'))
+            return redirect(next_page or url_for('main.home'))
         else:
             flash('Login Unsuccessful. Please check username/email and password.', 'danger')
             return redirect(url_for('auth.login'))
@@ -89,4 +89,4 @@ def logout():
     """Handles user logout."""
     logout_user()
     flash('You have been logged out.', 'info')
-    return redirect(url_for('main.index')) # Redirect to home page
+    return redirect(url_for('auth.login')) # Redirect to home page

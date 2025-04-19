@@ -1,218 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍳 Cooking & Recipe Tracker</title>
-    <!-- Link to External CSS served by Flask -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Link to Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Link to Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome - KitchenLog</title>
+  <!-- Link to existing stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>🍳 Cooking & Recipe Tracker</h1>
-            <p class="subtitle">Log your culinary adventures and share your favorite dishes</p>
-
-            <!-- User Authentication Links -->
-            <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
-                {% if current_user.is_authenticated %}
-                    <span style="margin-right: 15px; color: white; opacity: 0.9;">
-                        Welcome, {{ current_user.username }}!
-                    </span>
-                    <a href="{{ url_for('main.my_kitchen') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">My Kitchen</a>
-                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Dashboard</a>
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);">Logout</a>
-                {% else %}
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Log In</a>
-                    <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);">Sign Up</a>
-                {% endif %}
-            </nav>
-        </div>
-    </header>
-
+  <header>
     <div class="container">
-        <!-- START: Simplified Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages" style="margin-bottom: 20px;"> {# Optional wrapper div #}
-                    {% for category, message in messages %}
-                        {# Use the alert classes defined in style.css #}
-                        <div class="alert alert-{{ category }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        <!-- END: Simplified Flash Messages -->
-
-
-        <div class="tabs">
-            <div class="tab active" data-tab="recipes">All Recipes</div>
-            {% if current_user.is_authenticated %}
-                <div class="tab" data-tab="add">Add Recipe</div>
-                <div class="tab" data-tab="stats">My Stats</div>
-                <div class="tab" data-tab="share">Share</div>
-            {% else %}
-                 <div class="tab disabled" title="Log in to add recipes">Add Recipe</div>
-                 <div class="tab disabled" title="Log in to see stats">My Stats</div>
-                 <div class="tab disabled" title="Log in to share">Share</div>
-            {% endif %}
-        </div>
-
-        <!-- Recipes Tab -->
-        <div id="recipes" class="tab-content active">
-            <div class="card">
-                <h2>Recipe Collection</h2>
-                <div class="search-bar">
-                    <input type="text" id="recipe-search" placeholder="Search recipes...">
-                </div>
-                <div class="recipe-list" id="recipe-list">
-                    <p style="grid-column: 1/-1; text-align: center;">Loading recipes...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add Recipe Tab -->
-        <div id="add" class="tab-content">
-             {% if current_user.is_authenticated %}
-                 <div class="card">
-                     <h2>Add New Recipe</h2>
-                     <form id="recipe-form">
-                         <div class="form-group">
-                             <label for="recipe-name">Recipe Name</label>
-                             <input type="text" id="recipe-name" required>
-                         </div>
-                         <div class="form-group">
-                             <label for="recipe-category">Category</label>
-                             <select id="recipe-category" required>
-                                 <option value="">Select a category</option>
-                                 <option value="breakfast">Breakfast</option>
-                                 <option value="lunch">Lunch</option>
-                                 <option value="dinner">Dinner</option>
-                                 <option value="dessert">Dessert</option>
-                                 <option value="snack">Snack</option>
-                                 <option value="beverage">Beverage</option>
-                             </select>
-                         </div>
-                         <div class="form-group">
-                             <label for="recipe-time">Preparation Time (minutes)</label>
-                             <input type="number" id="recipe-time" required min="1">
-                         </div>
-                         <div class="form-group">
-                             <label for="recipe-ingredients">Ingredients</label>
-                             <textarea id="recipe-ingredients" placeholder="List ingredients separated by commas" required></textarea>
-                         </div>
-                         <div class="form-group">
-                             <label for="recipe-instructions">Instructions</label>
-                             <textarea id="recipe-instructions" required></textarea>
-                         </div>
-                         <div class="form-group">
-                             <label>Upload Image (Optional)</label>
-                             <div class="file-upload" id="file-upload">
-                                 <i class="fas fa-cloud-upload-alt"></i>
-                                 <p>Click to upload recipe image</p>
-                                 <input type="file" id="recipe-image" accept="image/*">
-                             </div>
-                             <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
-                         </div>
-                         <button type="submit" class="btn">Save Recipe</button>
-                     </form>
-                 </div>
-             {% else %}
-                 <div class="card">
-                     <h2>Add New Recipe</h2>
-                     <p>Please <a href="{{ url_for('auth.login') }}">log in</a> or <a href="{{ url_for('auth.signup') }}">sign up</a> to add recipes.</p>
-                 </div>
-             {% endif %}
-         </div>
-
-        <!-- Stats Tab -->
-        <div id="stats" class="tab-content">
-             {% if current_user.is_authenticated %}
-                 <div class="card">
-                     <h2>My Cooking Statistics</h2>
-                     <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-label">Total Recipes</div>
-                            <div class="stat-value" id="total-recipes">0</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Most Common Category</div>
-                            <div class="stat-value" id="most-cooked">-</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Total Time</div>
-                            <div class="stat-value" id="total-time">0</div>
-                            <div class="stat-label">minutes cooking</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">Average Time</div>
-                            <div class="stat-value" id="avg-time">0</div>
-                            <div class="stat-label">minutes/recipe</div>
-                        </div>
-                    </div>
-                    <h3 style="margin-top: 30px;">Recipe Distribution by Category</h3>
-                    <div class="chart-container"><canvas id="category-chart"></canvas></div>
-                    <h3 style="margin-top: 30px;">Cooking Time Distribution</h3>
-                    <div class="chart-container"><canvas id="time-chart"></canvas></div>
-                 </div>
-             {% else %}
-                 <div class="card">
-                     <h2>My Cooking Statistics</h2>
-                     <p>Please <a href="{{ url_for('auth.login') }}">log in</a> or <a href="{{ url_for('auth.signup') }}">sign up</a> to view your stats.</p>
-                 </div>
-             {% endif %}
-         </div>
-
-        <!-- Share Tab -->
-        <div id="share" class="tab-content">
-             {% if current_user.is_authenticated %}
-                 <div class="card">
-                     <h2>Share Your Recipes</h2>
-                     <p>Select a recipe to generate sharing links</p>
-                     <div class="form-group">
-                         <label for="share-recipe">Choose Recipe</label>
-                         <select id="share-recipe"><option value="">Select a recipe</option></select>
-                     </div>
-                     <div id="share-preview" style="display: none;">
-                         <div class="recipe-card" style="max-width: 400px; margin-bottom: 20px;">
-                             <div class="recipe-img" id="share-image"></div>
-                             <div class="recipe-info">
-                                 <h3 class="recipe-title" id="share-title"></h3>
-                                 <div class="recipe-meta">
-                                     <span id="share-category"></span>
-                                     <span id="share-time"></span>
-                                 </div>
-                             </div>
-                         </div>
-                         <p style="margin-bottom: 15px;">Share via:</p>
-                         <div class="share-options">
-                             <button class="share-btn facebook" onclick="shareRecipe('facebook')"><i class="fab fa-facebook-f"></i> Facebook</button>
-                             <button class="share-btn twitter" onclick="shareRecipe('twitter')"><i class="fab fa-twitter"></i> Twitter</button>
-                             <button class="share-btn whatsapp" onclick="shareRecipe('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                             <button class="share-btn email" onclick="shareRecipe('email')"><i class="fas fa-envelope"></i> Email</button>
-                         </div>
-                     </div>
-                 </div>
-             {% else %}
-                  <div class="card">
-                     <h2>Share Your Recipes</h2>
-                     <p>Please <a href="{{ url_for('auth.login') }}">log in</a> or <a href="{{ url_for('auth.signup') }}">sign up</a> to share recipes.</p>
-                 </div>
-             {% endif %}
-         </div>
+      <h1>🍳 KitchenLog</h1>
+      <p class="subtitle">Log, save, and share your favorite recipes with friends!</p>
+      <nav class="user-auth-nav" style="margin-top:15px; text-align:center;">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right:5px; background-color:var(--accent-color);">Log In</a>
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color:var(--accent-color);">Sign Up</a>
+      </nav>
     </div>
-    <!-- /.container -->
+  </header>
 
-    <script>
-        const IS_LOGGED_IN = {{ current_user,is_authenticated , tojson }};
-    </script>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <div class="container">
+    <section class="card">
+      <h2>About KitchenLog</h2>
+      <p>KitchenLog is your personal recipe journal, helping you keep track of all your culinary creations. Save recipes, organize them by category, and share them with friends with just a few clicks.</p>
 
+      <h3>Key Features</h3>
+      <ul>
+        <li>📚 Log unlimited recipes</li>
+        <li>🔍 Search and filter by ingredients or category</li>
+        <li>📊 View your cooking stats</li>
+        <li>🤝 Share recipes on social media or via email</li>
+      </ul>
+
+      <p>Ready to get started? <a href="{{ url_for('auth.signup') }}">Create an account</a> or <a href="{{ url_for('auth.login') }}">Log in</a> now!</p>
+    </section>
+  </div>
 </body>
 </html>
