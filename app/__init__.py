@@ -1,53 +1,76 @@
-# app/__init__.py
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager # Import LoginManager
 from flask_bcrypt import Bcrypt      # Import Bcrypt
-from config import Config
+from config import Config          # Import configuration class
 
-# Initialize extensions outside the factory function
+# Initialize extensions globally but without an app instance yet
 db = SQLAlchemy()
-bcrypt = Bcrypt() # Initialize Bcrypt
-login_manager = LoginManager() # Initialize LoginManager
+bcrypt = Bcrypt()
+login_manager = LoginManager()
 
-# Configure login view and message category
-# 'auth.login' refers to the login route within the 'auth' blueprint we will create
+# Configure Flask-Login settings
+# 'auth.login' is the endpoint name (blueprint_name.view_function_name) for the login route
 login_manager.login_view = 'auth.login'
-login_manager.login_message_category = 'info' # Bootstrap category for flash messages
+# The category for flashed messages when redirecting to login
+login_manager.login_message_category = 'info' # Use 'info' for Bootstrap alert styling
+
 
 # --- User Loader Function ---
-# This callback is used to reload the user object from the user ID stored in the session
+# This callback is crucial for Flask-Login. It tells Flask-Login how to
+# load a user object given the user ID stored in the session cookie.
 @login_manager.user_loader
 def load_user(user_id):
-    # Import the User model here to avoid circular imports at the top level
+    """Callback function used by Flask-Login to load a user from the user ID."""
+    # Import the User model here to avoid circular imports during initialization
     from .models import User
-    # user_id comes from the session as a string, convert to int for query
-    return User.query.get(int(user_id))
+    try:
+        # The user_id stored in the session is usually a string, convert to int for query
+        return User.query.get(int(user_id))
+    except (ValueError, TypeError):
+        # Handle cases where user_id is invalid
+        return None
 
 # --- Application Factory Function ---
+# This pattern allows creating multiple instances of the app with different
+# configurations, which is useful for testing and scaling.
 def create_app(config_class=Config):
+    """Creates and configures the Flask application instance."""
+
     app = Flask(__name__)
+    # Load configuration from the config_class object (e.g., config.Config)
     app.config.from_object(config_class)
 
-    # Initialize Flask extensions with the app instance
+    # Initialize Flask extensions with the app instance created by the factory
     db.init_app(app)
-    bcrypt.init_app(app)        # Initialize Bcrypt with app
-    login_manager.init_app(app) # Initialize LoginManager with app
+    bcrypt.init_app(app)
+    login_manager.init_app(app)
 
-    # Import and register Blueprints
+    # Import and register Blueprints within the factory function
+    # This avoids circular imports as blueprints might need 'app' or extensions
+
+    # Import the 'main' blueprint (for general routes and API)
     from .routes import main as main_blueprint
-    app.register_blueprint(main_blueprint)
+    app.register_blueprint(main_blueprint) # Register without a prefix (routes like /home, /api/recipes)
 
-    # Import and register the new auth Blueprint (we'll create auth.py next)
+    # Import the 'auth' blueprint (for authentication routes)
     from .auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint) # Register without a prefix for routes like /login
+    # Register the auth blueprint with a URL prefix
+    app.register_blueprint(auth_blueprint, url_prefix='/auth') # Routes like /auth/login, /auth/signup
 
-    # Create database tables (consider using Flask-Migrate later)
+    # Database Initialization within application context
     with app.app_context():
+        # Import models here AFTER db is initialized and within context
+        # The noqa comment prevents linters from complaining about unused import,
+        # but importing is necessary for SQLAlchemy to detect the models.
         from . import models # noqa: F401
+
         print("Ensuring database tables exist...")
-        # This will now create both Recipe and User tables if they don't exist
+        # This command creates database tables based on the defined models
+        # if they don't already exist. For production or complex changes,
+        # using Flask-Migrate is recommended.
         db.create_all()
         print("Database tables checked/created.")
 
+    # Return the configured app instance
     return app

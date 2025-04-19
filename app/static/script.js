@@ -24,6 +24,98 @@ async function fetchRecipes() {
     }
 }
 
+async function fetchApi(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        // ... basic response handling ...
+        if (!response.ok) {
+             // ... error extraction ...
+            throw new Error(`HTTP error! Status: ${response.status} - ${errorMessage}`);
+        }
+        return data; // Parsed JSON or text
+    } catch (error) {
+        console.error(`API Error (${options.method || 'GET'} ${url}):`, error);
+        throw error; // Rethrow for specific handling
+    }
+}
+// Example usage:
+// const recipes = await fetchApi('/api/recipes');
+// const newRecipe = await fetchApi('/api/recipes', { method: 'POST', ... });
+
+function showTemporaryStatusMessage(message, type = 'info') {
+    const statusDiv = document.createElement('div');
+    statusDiv.className = `alert alert-${type}`; // Use existing alert styles
+    statusDiv.textContent = message;
+    // Style for fixed position at top-center
+    statusDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1050; ...';
+    document.body.appendChild(statusDiv);
+    // Remove after a delay
+    setTimeout(() => { /* ... fade out and remove ... */ }, 3000);
+}
+// Example usage:
+// postSaveActions(savedRecipe, ...) { if (savedRecipe) { showTemporaryStatusMessage("Recipe saved!", "success"); } }
+
+
+function copyRecipeLink() {
+    const linkInput = document.getElementById('recipe-share-link');
+    if (!linkInput || !linkInput.value) {
+        showTemporaryStatusMessage('No recipe link available to copy.', 'warning');
+        return;
+    }
+
+    linkInput.focus(); // It's often helpful to focus the element first
+    linkInput.select(); // Select the text field's content
+    linkInput.setSelectionRange(0, 99999); // For mobile device compatibility
+
+    let copied = false; // Flag to track if copy was successful
+
+    // --- Try using execCommand first (legacy method) ---
+    try {
+        // Attempt to copy using the older execCommand
+        copied = document.execCommand('copy');
+        if (copied) {
+            showTemporaryStatusMessage('Link copied to clipboard!', 'success');
+        } else {
+            // execCommand is available but returned false (might happen in some cases)
+            throw new Error('execCommand returned false');
+        }
+    } catch (err) {
+        console.warn('execCommand copy failed, attempting Clipboard API fallback.', err);
+
+        // --- Fallback using the modern Clipboard API ---
+        // Check if the Clipboard API is available
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(linkInput.value)
+                .then(() => {
+                    // This function runs if writeText() is successful
+                    copied = true; // Mark as copied using the modern API
+                    showTemporaryStatusMessage('Link copied to clipboard!', 'success');
+                })
+                .catch(clipboardErr => {
+                    // This function runs if writeText() fails (e.g., permissions)
+                    console.error('Clipboard API fallback failed:', clipboardErr);
+                    showTemporaryStatusMessage('Failed to copy link automatically.', 'danger');
+                    // Provide clearer user instruction if both methods fail
+                    alert('Could not copy link automatically. Please select the link text and copy it manually (Ctrl+C or Cmd+C).');
+                });
+        } else {
+            // Clipboard API is not supported by the browser
+            console.error('Clipboard API not available.');
+            showTemporaryStatusMessage('Failed to copy link. Browser does not support clipboard operations.', 'danger');
+            alert('Could not copy link automatically. Please select the link text and copy it manually (Ctrl+C or Cmd+C).');
+        }
+    } finally {
+        // Deselect the text after attempting copy, regardless of success/failure
+        // Use a small timeout to ensure deselection happens after potential async clipboard operations finish
+        setTimeout(() => {
+            window.getSelection()?.removeAllRanges(); // Deselect using optional chaining
+            // Optionally blur the input field to remove focus visually
+            // linkInput.blur();
+        }, 100); // 100ms delay
+    }
+}
+
+
 async function addRecipeToServer(recipeData) {
     try {
         const response = await fetch('/api/recipes', {

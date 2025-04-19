@@ -4,55 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - KitchenLog</title>
-    <!-- Link to Bootstrap or your CSS -->
+    <!-- Link to main CSS stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        /* Add some basic spacing */
-        .auth-container { max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; }
-        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 8px; }
-        button { padding: 10px 15px; }
-        .alert { padding: 10px; margin-bottom: 15px; border-radius: 4px; }
-        .alert-success { background-color: #d4edda; color: #155724; }
-        .alert-warning { background-color: #fff3cd; color: #856404; }
-        .alert-danger { background-color: #f8d7da; color: #721c24; }
-        .alert-info { background-color: #d1ecf1; color: #0c5460; }
-    </style>
 </head>
 <body>
+    <!-- Container for the authentication form -->
     <div class="auth-container">
         <h2>Log In to KitchenLog</h2>
 
-        <!-- Flash Messages -->
+        <!-- Flash Messages Area -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
+                <div class="flash-messages" style="margin-bottom: 20px;"> {# Wrapper div #}
+                    {% for category, message in messages %}
+                        {# Use the alert classes defined in style.css #}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                            {# Optional: Add a close button for alerts #}
+                            <button type="button" class="close-alert" onclick="this.parentElement.style.display='none';" aria-label="Close">×</button>
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
+        <!-- End Flash Messages -->
 
-        <form method="POST" action="{{ url_for('auth.login') }}">
+        <!-- Login Form -->
+        {# Point action to the 'login' view function within the 'auth' blueprint #}
+        <form method="POST" action="{{ url_for('auth.login') }}{{ '?next=' + request.args.get('next', '') if request.args.get('next') else '' }}">
+            {# Note: Add CSRF token here if using Flask-WTF/WTForms for security #}
+            {# e.g., {{ form.csrf_token }} #}
+
             <div class="form-group">
                 <label for="username">Username or Email</label>
-                <input type="text" id="username" name="username" required>
+                {# Retain entered value if form submission failed #}
+                <input type="text" id="username" name="username" value="{{ identifier if identifier else '' }}" required autofocus>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <div class="form-group">
+            <div class="form-group remember-me"> {# Optional class for specific styling #}
+                {# Ensure checkbox label association is correct for accessibility #}
                 <input type="checkbox" id="remember" name="remember">
                 <label for="remember">Remember Me</label>
             </div>
             <button type="submit" class="btn">Log In</button>
         </form>
+        <!-- End Login Form -->
+
+        <!-- Links for Signup and Home -->
         <p style="margin-top: 20px;">
             Need an account? <a href="{{ url_for('auth.signup') }}">Sign Up</a>
         </p>
          <p>
-            <a href="{{ url_for('main.index') }}">Back to Home</a>
+            <a href="{{ url_for('main.index') }}">Back to Welcome Page</a>
         </p>
     </div>
 </body>
