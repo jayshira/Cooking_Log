@@ -61,6 +61,7 @@ Before you begin, ensure you have the following installed:
 - Python (version 3.8 or higher recommended)
 - `pip` (Python package installer, usually included with Python)
 - Git (for cloning the repository)
+- Note: If running "python -m venv env" returns an error such as "zsh: command not found: python", type "python3 -m venv env" instead. Similarly, to run Python scripts, use "python3 run.py" if python run.py does not work.
 
 ## Setup Instructions
 
@@ -98,6 +99,7 @@ Follow these steps to set up the project locally:
 4.  **Database Setup:**
     The application uses SQLite. The database file (`recipes.db`) and the necessary tables (`User`, `Recipe`) will be automatically created in the project's root directory the first time you run the application, thanks to the `db.create_all()` command within the app factory (`app/__init__.py`).
     *(Note: For more complex database changes later, integrating Flask-Migrate is recommended.)*
+    
 ## Running the Application
 
 1.  **Ensure Virtual Environment is Active:**
