@@ -131,7 +131,8 @@ KitchenLog/
 │   │   ├── auth/
 │   │   │   ├── login.html
 │   │   │   └── signup.html
-│   │   └── index.html
+│   │   ├── index.html
+│   │   └── home.html
 │   ├── __init__.py     # Application Factory
 │   ├── auth.py         # Authentication routes (auth blueprint)
 │   ├── models.py       # Database models
@@ -143,4 +144,5 @@ KitchenLog/
 ├── run.py              # Script to run the Flask application
 ├── README.md           # This file
 └── LICENSE             # (Optional) License file
+
 
