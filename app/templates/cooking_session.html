@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Use recipe name in title -->
+    <title>Cooking: {{ recipe.name }} - KitchenLog</title>
+    <!-- Link to your existing CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Link to Font Awesome CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Add specific styles for this page if needed */
+        .cooking-container { max-width: 1000px; margin: 20px auto; padding: 20px; }
+        .recipe-details, .log-section { background-color: var(--white); border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        h1, h2 { color: var(--primary-color); border-bottom: 2px solid var(--light-color); padding-bottom: 10px; margin-bottom: 20px; }
+        pre { background-color: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee; white-space: pre-wrap; word-wrap: break-word; font-size: 0.95em; max-height: 400px; overflow-y: auto; }
+        #timer-display { font-size: 2.5rem; font-weight: bold; color: var(--dark-color); display: block; margin-bottom: 15px; text-align: center; background-color: #f0f0f0; padding: 10px; border-radius: 5px;}
+        .timer-controls button { margin-right: 10px; }
+        .log-form .form-group { margin-bottom: 15px; }
+        .rating-stars label { cursor: pointer; font-size: 1.8rem; color: #ccc; transition: color 0.2s; }
+        .rating-stars input[type="radio"] { display: none; }
+        .rating-stars input[type="radio"]:checked ~ label { color: #ffc107; } /* Following siblings */
+        .rating-stars label:hover,
+        .rating-stars label:hover ~ label { color: #ffca2c; } /* Hover effect */
+        .rating-stars { display: inline-block; direction: rtl; } /* Right-to-left for star selection */
+        .rating-stars label { float: right; } /* Float right within the RTL container */
+
+    </style>
+</head>
+<body>
+    <div class="cooking-container">
+        <!-- Link back to Home/My Kitchen -->
+        <div style="margin-bottom: 20px;">
+             <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to Home</a>
+        </div>
+
+        <h1><i class="fas fa-utensils"></i> Cooking: {{ recipe.name }}</h1>
+
+        <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+
+            <!-- Recipe Details Column -->
+            <div class="col-md-6" style="flex: 1; min-width: 300px;">
+                <div class="recipe-details">
+                    <h2><i class="fas fa-list-ul"></i> Ingredients</h2>
+                    {# Use a loop for better formatting if ingredients is a list #}
+                    {% if recipe.ingredients is iterable and recipe.ingredients is not string %}
+                        <ul>
+                            {% for item in recipe.ingredients %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <pre>{{ recipe.ingredients }}</pre> {# Fallback for string #}
+                    {% endif %}
+
+                    <h2><i class="fas fa-shoe-prints"></i> Instructions</h2>
+                    <pre>{{ recipe.instructions }}</pre>
+                </div>
+            </div>
+
+            <!-- Timer and Logging Column -->
+            <div class="col-md-6" style="flex: 1; min-width: 300px;">
+                <div class="log-section">
+                    <h2><i class="fas fa-stopwatch"></i> Session Timer</h2>
+                    <span id="timer-display">00:00:00</span>
+                    <div class="timer-controls mb-3 text-center">
+                        <button id="start-timer-btn" class="btn btn-primary"><i class="fas fa-play"></i> Start</button>
+                        <button id="stop-timer-btn" class="btn btn-warning" disabled><i class="fas fa-stop"></i> Stop</button>
+                        <button id="reset-timer-btn" class="btn btn-secondary" disabled><i class="fas fa-undo"></i> Reset</button>
+                    </div>
+                    <hr style="margin: 25px 0;">
+
+                    <h2><i class="fas fa-clipboard-list"></i> Log Your Session</h2>
+                    <form id="log-form" class="log-form" action="{{ url_for('main.log_cooking_session', recipe_id=recipe.id) }}" method="POST">
+                        <!-- Hidden field to store timer duration -->
+                        <input type="hidden" id="duration_seconds" name="duration_seconds" value="0">
+
+                        <div class="form-group">
+                            <label for="date_cooked" class="form-label"><i class="fas fa-calendar-alt"></i> Date Cooked</label>
+                            <input type="date" class="form-control" id="date_cooked" name="date_cooked" value="{{ today_iso }}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="rating" class="form-label"><i class="fas fa-star"></i> Rating (Optional)</label>
+                            <div class="rating-stars">
+                                <!-- Use radio buttons for star rating -->
+                                <input type="radio" id="star5" name="rating" value="5" /><label for="star5" title="5 stars">★</label>
+                                <input type="radio" id="star4" name="rating" value="4" /><label for="star4" title="4 stars">★</label>
+                                <input type="radio" id="star3" name="rating" value="3" /><label for="star3" title="3 stars">★</label>
+                                <input type="radio" id="star2" name="rating" value="2" /><label for="star2" title="2 stars">★</label>
+                                <input type="radio" id="star1" name="rating" value="1" /><label for="star1" title="1 star">★</label>
+                                <!-- Add an option for no rating? Or just leave unchecked -->
+                            </div>
+                        </div>
+
+
+                        <div class="form-group">
+                            <label for="notes" class="form-label"><i class="fas fa-pencil-alt"></i> Session Notes (Optional)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="e.g., Substituted chicken for tofu, turned out great! Needed extra 5 mins bake time."></textarea>
+                        </div>
+
+                        <button type="submit" id="log-session-btn" class="btn btn-success w-100"><i class="fas fa-check"></i> Finish & Log Session</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Timer Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const timerDisplay = document.getElementById('timer-display');
+            const startBtn = document.getElementById('start-timer-btn');
+            const stopBtn = document.getElementById('stop-timer-btn');
+            const resetBtn = document.getElementById('reset-timer-btn');
+            const durationInput = document.getElementById('duration_seconds');
+            const logForm = document.getElementById('log-form');
+
+            let timerInterval = null;
+            let startTime = null;
+            let elapsedSeconds = 0;
+            let running = false;
+
+            function formatTime(totalSeconds) {
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+                return [hours, minutes, seconds]
+                    .map(v => v < 10 ? "0" + v : v)
+                    .join(":");
+            }
+
+            function updateTimer() {
+                if (!running) return;
+                const now = Date.now();
+                elapsedSeconds = Math.floor((now - startTime) / 1000);
+                timerDisplay.textContent = formatTime(elapsedSeconds);
+            }
+
+            function startTimer() {
+                if (running) return;
+                running = true;
+                startTime = Date.now() - (elapsedSeconds * 1000); // Resume timer accurately
+                timerInterval = setInterval(updateTimer, 1000);
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                resetBtn.disabled = true; // Disable reset while running
+            }
+
+            function stopTimer() {
+                if (!running) return;
+                running = false;
+                clearInterval(timerInterval);
+                timerInterval = null;
+                updateTimer(); // Final update
+                durationInput.value = elapsedSeconds; // Store duration
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                resetBtn.disabled = false; // Enable reset after stopping
+            }
+
+            function resetTimer() {
+                if (running) return; // Cannot reset while running
+                elapsedSeconds = 0;
+                durationInput.value = 0;
+                timerDisplay.textContent = formatTime(0);
+                resetBtn.disabled = true; // Disable reset after resetting
+                stopBtn.disabled = true;
+                startBtn.disabled = false;
+            }
+
+            startBtn.addEventListener('click', startTimer);
+            stopBtn.addEventListener('click', stopTimer);
+            resetBtn.addEventListener('click', resetTimer);
+
+            // Optional: Prevent form submission if timer is running?
+            logForm.addEventListener('submit', (event) => {
+                if (running) {
+                    if (!confirm("The timer is still running. Do you want to stop it and log the session now?")) {
+                        event.preventDefault(); // Prevent submission
+                    } else {
+                        stopTimer(); // Stop timer and allow submission
+                    }
+                }
+                // Ensure duration is set if timer was started and stopped manually before submit
+                if (!running && startTime) {
+                     durationInput.value = elapsedSeconds;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

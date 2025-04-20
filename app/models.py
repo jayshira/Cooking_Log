@@ -1,14 +1,24 @@
 import json
+<<<<<<< Updated upstream
 from datetime import datetime # Use datetime for proper timestamp handling
 from . import db        # Import db instance from the current package (__init__.py)
 from flask_login import UserMixin # Import UserMixin for Flask-Login integration
 from . import bcrypt    # Import bcrypt instance from the current package (__init__.py)
 
 # --- Recipe Model ---
+=======
+from . import db
+from flask_login import UserMixin
+from . import bcrypt
+from datetime import date, datetime, timedelta # Import date/time modules
+
+# --- Existing Recipe Model (Keep as is, just add relationship) ---
+>>>>>>> Stashed changes
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     category = db.Column(db.String(50), nullable=False)
+<<<<<<< Updated upstream
     time = db.Column(db.Integer, nullable=False) # Prep/Cook time in minutes
     ingredients_json = db.Column(db.Text, nullable=False) # Store ingredients as JSON string
     instructions = db.Column(db.Text, nullable=False)
@@ -25,6 +35,20 @@ class Recipe(db.Model):
     # --- Ingredients Property ---
     # Provides a convenient way to get/set ingredients as a Python list,
     # while storing them as a JSON string in the database for efficiency.
+=======
+    time = db.Column(db.Integer, nullable=False) # Assuming this is prep/cook time in minutes
+    ingredients_json = db.Column(db.Text, nullable=False)
+    instructions = db.Column(db.Text, nullable=False)
+    date = db.Column(db.String(30), nullable=False) # Original creation/added date
+    image = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Add relationship to CookingLog
+    # 'recipe_cooked' is the attribute to access the Recipe from a CookingLog instance
+    # 'backref='logs'' adds a 'logs' attribute to the Recipe object to get its logs
+    cooking_logs = db.relationship('CookingLog', backref='recipe_logged', lazy=True)
+
+>>>>>>> Stashed changes
     @property
     def ingredients(self):
         """ Safely parses the ingredients_json string into a list. """
@@ -63,7 +87,11 @@ class Recipe(db.Model):
     # --- to_dict Method ---
     # Useful for converting the Recipe object into a dictionary, often needed for API responses.
     def to_dict(self):
+<<<<<<< Updated upstream
         """ Returns dictionary representation of the recipe. """
+=======
+        # Add user_id to the dictionary for potential frontend use
+>>>>>>> Stashed changes
         return {
             'id': self.id,
             'name': self.name,
@@ -74,10 +102,15 @@ class Recipe(db.Model):
             # Format the datetime object into a standard ISO string format
             'date': self.date_added.isoformat() + 'Z' if self.date_added else None, # Add Z for UTC
             'image': self.image,
+<<<<<<< Updated upstream
             # Include the author's username using the backref relationship ('author' from User model)
             'author': self.author.username if self.author else 'Unknown',
             # Include user_id, might be useful on the frontend sometimes
             'user_id': self.user_id
+=======
+            'author': self.author.username if self.author else 'Unknown',
+            'user_id': self.user_id # Add user_id
+>>>>>>> Stashed changes
         }
 
     # --- __repr__ Method ---
@@ -85,9 +118,13 @@ class Recipe(db.Model):
     def __repr__(self):
         return f"<Recipe {self.id}: {self.name}>"
 
+<<<<<<< Updated upstream
 
 # --- User Model ---
 # Inherits from db.Model (SQLAlchemy base class) and UserMixin (Flask-Login requirement)
+=======
+# --- Updated User Model ---
+>>>>>>> Stashed changes
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -96,6 +133,7 @@ class User(UserMixin, db.Model):
     # Use DateTime type and default to current UTC time when a user joins
     date_joined = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
+<<<<<<< Updated upstream
     # --- Relationship to Recipe ---
     # Defines the 'one' side of the one-to-many relationship (one User has many Recipes)
     # 'Recipe' is the class name of the related model.
@@ -117,6 +155,26 @@ class User(UserMixin, db.Model):
         if self.password_hash is None:
             return False
         # Use bcrypt's check function
+=======
+    # Relationship to Recipe (one-to-many) - Keep as is
+    recipes = db.relationship('Recipe', backref='author', lazy=True)
+
+    # --- Additions for Cooking Log ---
+    # Relationship to CookingLog (one-to-many: User has many logs)
+    # 'cook' is the attribute to access the User from a CookingLog instance
+    # 'backref='logs'' adds a 'logs' attribute to the User object to get their logs
+    cooking_logs = db.relationship('CookingLog', backref='cook', lazy=True)
+
+    # Fields for cooking streak
+    last_cooked_date = db.Column(db.Date, nullable=True)
+    current_streak = db.Column(db.Integer, default=0, nullable=False)
+    # --- End Additions ---
+
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def check_password(self, password):
+>>>>>>> Stashed changes
         return bcrypt.check_password_hash(self.password_hash, password)
 
     # --- __repr__ Method ---
@@ -124,5 +182,25 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f"<User {self.username}>"
 
+<<<<<<< Updated upstream
 # --- Future Models ---
 # Add other models (e.g., CookingLog, Tag, ShareLink) here later as needed.
+=======
+# --- New CookingLog Model ---
+class CookingLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    date_cooked = db.Column(db.Date, nullable=False, default=date.today)
+    duration_seconds = db.Column(db.Integer, nullable=True) # Actual time spent cooking in seconds
+    rating = db.Column(db.Integer, nullable=True) # e.g., 1-5 stars
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow) # Track when the log entry was created
+
+    # Relationships are defined via backref in User and Recipe models
+
+    def __repr__(self):
+        # Access related recipe name using the backref 'recipe_logged'
+        recipe_name = self.recipe_logged.name if self.recipe_logged else 'Unknown Recipe'
+        return f"<CookingLog {self.id} for '{recipe_name}' by User {self.user_id} on {self.date_cooked}>"
+>>>>>>> Stashed changes
