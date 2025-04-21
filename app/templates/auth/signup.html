@@ -4,66 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - KitchenLog</title>
-    <!-- Link to main CSS stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-     <!-- Container for the authentication form -->
     <div class="auth-container">
         <h2>Sign Up for KitchenLog</h2>
 
-        <!-- Flash Messages Area -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                 <div class="flash-messages" style="margin-bottom: 20px;"> {# Wrapper div #}
+                <div class="flash-messages">
                     {% for category, message in messages %}
-                        {# Use the alert classes defined in style.css #}
                         <div class="alert alert-{{ category }}">
                             {{ message }}
-                             {# Optional: Add a close button for alerts #}
-                            <button type="button" class="close-alert" onclick="this.parentElement.style.display='none';" aria-label="Close">×</button>
+                            <button type="button" class="close-alert">×</button>
                         </div>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
-         <!-- End Flash Messages -->
 
-        <!-- Signup Form -->
-         {# Point action to the 'signup' view function within the 'auth' blueprint #}
         <form method="POST" action="{{ url_for('auth.signup') }}">
-             {# Note: Add CSRF token here if using Flask-WTF/WTForms for security #}
-             {# e.g., {{ form.csrf_token }} #}
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control") }}
+                {% for error in form.username.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
 
             <div class="form-group">
-                <label for="username">Username</label>
-                 {# Retain entered value if form submission failed #}
-                <input type="text" id="username" name="username" value="{{ username if username else '' }}" required autofocus>
+                {{ form.email.label(class="form-label") }}
+                {{ form.email(class="form-control") }}
+                {% for error in form.email.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
             </div>
+
             <div class="form-group">
-                <label for="email">Email</label>
-                 {# Retain entered value if form submission failed #}
-                <input type="email" id="email" name="email" value="{{ email if email else '' }}" required>
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control") }}
+                {% for error in form.password.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
             </div>
+
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-                {# Optional: Add password requirements hint here #}
-                {# <small>Minimum 8 characters recommended.</small> #}
+                {{ form.confirm_password.label(class="form-label") }}
+                {{ form.confirm_password(class="form-control") }}
+                {% for error in form.confirm_password.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
             </div>
-            <div class="form-group">
-                <label for="confirm_password">Confirm Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" required>
-            </div>
-            <button type="submit" class="btn">Sign Up</button>
+
+            {{ form.submit(class="btn btn-primary") }}
         </form>
-        <!-- End Signup Form -->
 
-        <!-- Links for Login and Home -->
         <p style="margin-top: 20px;">
             Already have an account? <a href="{{ url_for('auth.login') }}">Log In</a>
         </p>
-        <p>
+         <p>
             <a href="{{ url_for('main.index') }}">Back to Welcome Page</a>
         </p>
     </div>

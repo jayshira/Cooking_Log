@@ -4,56 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }} - KitchenLog</title>
-    <!-- Link to main CSS stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <!-- Container for the authentication form -->
     <div class="auth-container">
         <h2>Log In to KitchenLog</h2>
 
-        <!-- Flash Messages Area -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flash-messages" style="margin-bottom: 20px;"> {# Wrapper div #}
+                <div class="flash-messages">
                     {% for category, message in messages %}
-                        {# Use the alert classes defined in style.css #}
                         <div class="alert alert-{{ category }}">
                             {{ message }}
-                            {# Optional: Add a close button for alerts #}
-                            <button type="button" class="close-alert" onclick="this.parentElement.style.display='none';" aria-label="Close">×</button>
+                            <button type="button" class="close-alert">×</button>
                         </div>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
-        <!-- End Flash Messages -->
 
-        <!-- Login Form -->
-        {# Point action to the 'login' view function within the 'auth' blueprint #}
-        <form method="POST" action="{{ url_for('auth.login') }}{{ '?next=' + request.args.get('next', '') if request.args.get('next') else '' }}">
-            {# Note: Add CSRF token here if using Flask-WTF/WTForms for security #}
-            {# e.g., {{ form.csrf_token }} #}
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.identifier.label(class="form-label") }}
+                {{ form.identifier(class="form-control") }}
+                {% for error in form.identifier.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </div>
 
             <div class="form-group">
-                <label for="username">Username or Email</label>
-                {# Retain entered value if form submission failed #}
-                <input type="text" id="username" name="username" value="{{ identifier if identifier else '' }}" required autofocus>
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control") }}
+                {% for error in form.password.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
             </div>
+
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                {{ form.remember.label(class="form-check-label") }}
+                {{ form.remember(class="form-check-input") }}
             </div>
-            <div class="form-group remember-me"> {# Optional class for specific styling #}
-                {# Ensure checkbox label association is correct for accessibility #}
-                <input type="checkbox" id="remember" name="remember">
-                <label for="remember">Remember Me</label>
-            </div>
-            <button type="submit" class="btn">Log In</button>
+
+            {{ form.submit(class="btn btn-primary") }}
         </form>
-        <!-- End Login Form -->
 
-        <!-- Links for Signup and Home -->
         <p style="margin-top: 20px;">
             Need an account? <a href="{{ url_for('auth.signup') }}">Sign Up</a>
         </p>
