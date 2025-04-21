@@ -2,12 +2,14 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager # Import LoginManager
 from flask_bcrypt import Bcrypt      # Import Bcrypt
-from config import Config          # Import configuration class
+from flask_wtf import CSRFProtect    # Import CSRFProtect
+from config import Config            # Import configuration class
 
 # Initialize extensions globally but without an app instance yet
 db = SQLAlchemy()
 bcrypt = Bcrypt()
 login_manager = LoginManager()
+csrf = CSRFProtect()
 
 # Configure Flask-Login settings
 # 'auth.login' is the endpoint name (blueprint_name.view_function_name) for the login route
@@ -45,6 +47,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     bcrypt.init_app(app)
     login_manager.init_app(app)
+    csrf.init_app(app)
 
     # Import and register Blueprints within the factory function
     # This avoids circular imports as blueprints might need 'app' or extensions
