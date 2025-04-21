@@ -123,30 +123,78 @@ function copyRecipeLink() {
 
 
 async function addRecipeToServer(recipeData) {
-     // No changes needed here, user_id is handled by backend
-     try {
+    // Get the CSRF token from the meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!csrfToken) {
+        console.error("CSRF token not found in meta tag!");
+        alert("Action failed: Security token missing. Please refresh the page.");
+        return null;
+    }
+
+    try {
         const response = await fetch('/api/recipes', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken // Include the token in the headers
+            },
             body: JSON.stringify(recipeData),
         });
+        // ... (rest of the function remains the same) ...
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' })); // Catch JSON parse errors
-            // Handle specific errors if needed (like 401 Unauthorized)
-            if (response.status === 401) {
-                 alert("Your session may have expired. Please log in again.");
-                 window.location.href = '/login';
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            if (response.status === 401) { /* ... */ }
+            // Check specifically for 400, often related to CSRF or validation issues
+            if (response.status === 400 && errorData.error && errorData.error.toLowerCase().includes('csrf')) {
+                 alert("Action failed: Security token mismatch. Please refresh the page and try again.");
                  return null;
             }
             throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
         }
         const newRecipe = await response.json();
-        currentRecipes.unshift(newRecipe); // Add to beginning assuming sorted by new
+        currentRecipes.unshift(newRecipe);
         return newRecipe;
     } catch (error) {
         console.error("Error adding recipe:", error);
         alert(`Failed to save recipe: ${error.message}`);
         return null;
+    }
+}
+
+async function deleteRecipeFromServer(recipeId) {
+    // Get the CSRF token from the meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+     if (!csrfToken) {
+        console.error("CSRF token not found in meta tag!");
+        alert("Action failed: Security token missing. Please refresh the page.");
+        return false; // Indicate failure
+    }
+
+    try {
+        const response = await fetch(`/api/recipes/${recipeId}`, {
+            method: 'DELETE',
+            headers: { // Add headers object
+                'X-CSRFToken': csrfToken // Include the token
+            }
+        });
+        // ... (rest of the function remains the same) ...
+         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+             if (response.status === 401) { /* ... */ }
+             if (response.status === 403) { /* ... */ }
+             if (response.status === 409) { /* ... */ }
+              if (response.status === 400 && errorData.error && errorData.error.toLowerCase().includes('csrf')) {
+                 alert("Action failed: Security token mismatch. Please refresh the page and try again.");
+                 return false;
+             }
+            throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
+        }
+        currentRecipes = currentRecipes.filter(r => r.id !== recipeId);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting recipe ${recipeId}:`, error);
+        alert(`Failed to delete recipe: ${error.message}`);
+        return false;
     }
 }
 

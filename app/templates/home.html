@@ -1,17 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Use a more specific title -->
-    <title>My Kitchen - KitchenLog</title>
-    <!-- Link to External CSS served by Flask -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Link to Font Awesome CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Link to Chart.js Library -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Add this meta tag -->
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <title>My Kitchen - KitchenLog</title>
+        <!-- Other head elements -->
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
 <body>
     <header>
         <div class="container">
