@@ -260,7 +260,7 @@ function renderRecipeCard(recipe) {
             </p>
             <div class="recipe-actions">
                 <!-- View Button (always visible maybe?) -->
-                <button class="btn btn-secondary btn-sm" onclick="viewRecipe(${recipe.id})">
+                <a href="/view_recipe/${recipe.id}" class="btn btn-secondary btn-sm">
                     <i class="fas fa-eye"></i> View
                 </button>
 
@@ -444,6 +444,7 @@ function postSaveActions(savedRecipe, submitButton) {
 
 // Delete recipe function (called by button)
 async function deleteRecipe(id) {
+    console.log(id);
     // Find recipe name for confirmation message
     const recipe = currentRecipes.find(r => r.id === id);
     const recipeName = recipe ? `"${recipe.name}"` : "this recipe";
@@ -458,38 +459,39 @@ async function deleteRecipe(id) {
     }
 }
 
-// View recipe details (uses local cache)
-function viewRecipe(id) {
-    const recipe = currentRecipes.find(r => r.id == id);
+/* COMMENTED FOR NOW SINCE THERE IS A NEW VIEW RECIPE PAGE */
+// View recipe details (uses local cache) 
+// function viewRecipe(id) {
+//     const recipe = currentRecipes.find(r => r.id == id);
 
-    if (recipe) {
-        let ingredientsString = "No ingredients listed.";
-        if (recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
-            ingredientsString = "- " + recipe.ingredients.join('\n- ');
-        } else if (typeof recipe.ingredients === 'string' && recipe.ingredients.trim()) {
-             // Fallback if somehow it's still a string
-             ingredientsString = recipe.ingredients;
-        }
+//     if (recipe) {
+//         let ingredientsString = "No ingredients listed.";
+//         if (recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
+//             ingredientsString = "- " + recipe.ingredients.join('\n- ');
+//         } else if (typeof recipe.ingredients === 'string' && recipe.ingredients.trim()) {
+//              // Fallback if somehow it's still a string
+//              ingredientsString = recipe.ingredients;
+//         }
 
-        alert(`
---------------------
-RECIPE: ${recipe.name}
---------------------
-Category: ${recipe.category}
-Time: ${recipe.time} minutes
-Added/Updated: ${recipe.date} ${recipe.author ? '\nAuthor: '+recipe.author : ''}
+//         alert(`
+// --------------------
+// RECIPE: ${recipe.name}
+// --------------------
+// Category: ${recipe.category}
+// Time: ${recipe.time} minutes
+// Added/Updated: ${recipe.date} ${recipe.author ? '\nAuthor: '+recipe.author : ''}
 
-INGREDIENTS:
-${ingredientsString}
+// INGREDIENTS:
+// ${ingredientsString}
 
-INSTRUCTIONS:
-${recipe.instructions || 'No instructions provided.'}
---------------------
-        `);
-    } else {
-        alert('Recipe details not found. The list might be updating, please try again shortly.');
-    }
-}
+// INSTRUCTIONS:
+// ${recipe.instructions || 'No instructions provided.'}
+// --------------------
+//         `);
+//     } else {
+//         alert('Recipe details not found. The list might be updating, please try again shortly.');
+//     }
+// }
 
 // Display share preview (uses local cache)
 function displaySharePreview(recipeId) {
