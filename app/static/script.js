@@ -198,36 +198,37 @@ async function deleteRecipeFromServer(recipeId) {
     }
 }
 
-async function deleteRecipeFromServer(recipeId) {
-    // No changes needed here, authorization is handled by backend
-     try {
-        const response = await fetch(`/api/recipes/${recipeId}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-             if (response.status === 401) {
-                 alert("Your session may have expired. Please log in again.");
-                 window.location.href = '/login';
-                 return false;
-             }
-             if (response.status === 403) { // Forbidden
-                throw new Error(`Authorization error: ${errorData.error}`);
-             }
-             if (response.status === 409) { // Conflict (e.g., recipe has logs)
-                 throw new Error(`${errorData.error}`); // Display the specific error from backend
-             }
-            throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
-        }
-        currentRecipes = currentRecipes.filter(r => r.id !== recipeId);
-        return true;
-    } catch (error) {
-        console.error(`Error deleting recipe ${recipeId}:`, error);
-        // Display specific error message from backend if available
-        alert(`Failed to delete recipe: ${error.message}`);
-        return false;
-    }
-}
+/* COMMENTED OUT SINCE TWO OF THE SAME FUNCTION IS MADE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) - jason*/
+// async function deleteRecipeFromServer(recipeId) {
+//     // No changes needed here, authorization is handled by backend
+//      try {
+//         const response = await fetch(`/api/recipes/${recipeId}`, {
+//             method: 'DELETE',
+//         });
+//         if (!response.ok) {
+//             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+//              if (response.status === 401) {
+//                  alert("Your session may have expired. Please log in again.");
+//                  window.location.href = '/login';
+//                  return false;
+//              }
+//              if (response.status === 403) { // Forbidden
+//                 throw new Error(`Authorization error: ${errorData.error}`);
+//              }
+//              if (response.status === 409) { // Conflict (e.g., recipe has logs)
+//                  throw new Error(`${errorData.error}`); // Display the specific error from backend
+//              }
+//             throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
+//         }
+//         currentRecipes = currentRecipes.filter(r => r.id !== recipeId);
+//         return true;
+//     } catch (error) {
+//         console.error(`Error deleting recipe ${recipeId}:`, error);
+//         // Display specific error message from backend if available
+//         alert(`Failed to delete recipe: ${error.message}`);
+//         return false;
+//     }
+// }
 
 // --- UI Rendering ---
 
@@ -532,7 +533,7 @@ async function deleteRecipe(id) {
     }
 }
 
-/* COMMENTED FOR NOW SINCE THERE IS A NEW VIEW RECIPE PAGE */
+/* COMMENTED FOR NOW SINCE THERE IS A NEW VIEW RECIPE PAGE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) - jason */
 // View recipe details (uses local cache) 
 // function viewRecipe(id) {
 //     const recipe = currentRecipes.find(r => r.id == id);
