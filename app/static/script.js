@@ -235,16 +235,15 @@ async function deleteRecipeFromServer(recipeId) {
 function renderRecipeCard(recipe) {
     const recipeCard = document.createElement('div');
     recipeCard.className = 'recipe-card';
-    recipeCard.dataset.id = recipe.id; // Keep data-id for delete/view
+    recipeCard.dataset.id = recipe.id;
 
-    const ingredientsPreview = (Array.isArray(recipe.ingredients) ? recipe.ingredients : []) // Ensure it's an array
-                               .slice(0, 4).join(', ') + (recipe.ingredients.length > 4 ? '...' : '');
+    const ingredientsPreview = (Array.isArray(recipe.ingredients) ? recipe.ingredients : [])
+        .slice(0, 4).join(', ') + (recipe.ingredients.length > 4 ? '...' : '');
+    
     const imageStyle = recipe.image
         ? `background-image: url(${recipe.image});`
-        : 'background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color));'; // Default gradient
+        : 'background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color));';
 
-    // Determine if current user owns this recipe (needed for button visibility)
-    // Assumes CURRENT_USER_ID is available globally from the template
     const isOwner = typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID;
 
     recipeCard.innerHTML = `
@@ -259,17 +258,17 @@ function renderRecipeCard(recipe) {
                 <strong>Ingredients:</strong> ${ingredientsPreview || 'No ingredients listed'}
             </p>
             <div class="recipe-actions">
-                <!-- View Button (always visible maybe?) -->
                 <button class="btn btn-secondary btn-sm" onclick="viewRecipe(${recipe.id})">
                     <i class="fas fa-eye"></i> View
                 </button>
 
                 ${isOwner ? `
-                <!-- Start Cooking Button (only for owner) -->
+                <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
                 <a href="/start_cooking/${recipe.id}" class="btn btn-success btn-sm">
                     <i class="fas fa-utensils"></i> Cook
                 </a>
-                <!-- Delete Button (only for owner) -->
                 <button class="btn btn-danger btn-sm" onclick="deleteRecipe(${recipe.id})">
                     <i class="fas fa-trash"></i> Delete
                 </button>
@@ -279,6 +278,7 @@ function renderRecipeCard(recipe) {
     `;
     return recipeCard;
 }
+
 
 // Load recipes into the UI and Share dropdown
 async function loadRecipes() {
@@ -359,59 +359,131 @@ function checkShareDropdown() {
 async function handleFormSubmit(event) {
     event.preventDefault();
 
+    // Get form values
     const name = document.getElementById('recipe-name').value.trim();
     const category = document.getElementById('recipe-category').value;
     const timeInput = document.getElementById('recipe-time').value;
-    const ingredientsText = document.getElementById('recipe-ingredients').value.trim(); // Get raw text
+    const ingredientsText = document.getElementById('recipe-ingredients').value.trim();
     const instructions = document.getElementById('recipe-instructions').value.trim();
     const imageInput = document.getElementById('recipe-image');
 
+    // Validation (same as before)
     if (!name || !category || !timeInput || !ingredientsText || !instructions) {
-         alert('Please fill in all required fields.');
-         return;
+        alert('Please fill in all required fields.');
+        return;
     }
+
     const time = parseInt(timeInput, 10);
-     if (isNaN(time) || time <= 0) {
-         alert('Please enter a valid positive number for time.');
-         return;
-     }
+    if (isNaN(time) || time <= 0) {
+        alert('Please enter a valid positive number for time.');
+        return;
+    }
 
-     // Smart ingredient parsing: handles commas and newlines
-     const ingredientsList = ingredientsText
-        .split(/[\\n,]+/) // Split by newline OR comma
-        .map(i => i.trim()) // Trim whitespace
-        .filter(i => i); // Remove empty lines/items
+    // Process ingredients
+    const ingredientsList = ingredientsText.split(/[\n,]+/).map(i => i.trim()).filter(i => i);
 
-    const newRecipeData = {
+    // Check if we're editing or creating
+    const form = document.getElementById('recipe-form');
+    const isEditing = form.dataset.editingId;
+
+    const recipeData = {
         name,
         category,
         time,
-        ingredients: ingredientsList, // Send as an array
+        ingredients: ingredientsList,
         instructions,
-        date: new Date().toISOString().split('T')[0], // Just date part
+        date: new Date().toISOString().split('T')[0],
         image: null
     };
 
     const submitButton = event.target.querySelector('button[type="submit"]');
     submitButton.disabled = true;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; // Add saving icon
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
+    // Handle image if provided
     if (imageInput.files.length > 0) {
         const reader = new FileReader();
         reader.onload = async function(e) {
-            newRecipeData.image = e.target.result; // Base64 string
-            const savedRecipe = await addRecipeToServer(newRecipeData);
-            postSaveActions(savedRecipe, submitButton);
+            recipeData.image = e.target.result;
+            await saveRecipe(recipeData, isEditing, submitButton);
         };
         reader.onerror = function() {
             console.error("Error reading file");
             alert("Error reading image file. Saving recipe without image.");
-            addRecipeToServer(newRecipeData).then(savedRecipe => postSaveActions(savedRecipe, submitButton));
+            saveRecipe(recipeData, isEditing, submitButton);
         };
-        reader.readAsDataURL(imageInput.files[0]); // Read as Base64
+        reader.readAsDataURL(imageInput.files[0]);
     } else {
-        const savedRecipe = await addRecipeToServer(newRecipeData);
+        await saveRecipe(recipeData, isEditing, submitButton);
+    }
+}
+
+async function saveRecipe(recipeData, isEditing, submitButton) {
+    let savedRecipe;
+    try {
+        if (isEditing) {
+            // Update existing recipe
+            const response = await fetch(`/api/recipes/${isEditing}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(recipeData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            savedRecipe = await response.json();
+            // Update local cache
+            const index = currentRecipes.findIndex(r => r.id == isEditing);
+            if (index !== -1) {
+                currentRecipes[index] = savedRecipe;
+            }
+        } else {
+            // Create new recipe
+            savedRecipe = await addRecipeToServer(recipeData);
+        }
+
         postSaveActions(savedRecipe, submitButton);
+    } catch (error) {
+        console.error("Error saving recipe:", error);
+        alert(`Failed to save recipe: ${error.message}`);
+        submitButton.disabled = false;
+        submitButton.innerHTML = isEditing ? 
+            '<i class="fas fa-save"></i> Update Recipe' : 
+            '<i class="fas fa-save"></i> Save Recipe';
+    }
+}
+
+function postSaveActions(savedRecipe, submitButton) {
+    submitButton.disabled = false;
+    submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+    
+    if (savedRecipe) {
+        document.getElementById('recipe-form').reset();
+        delete document.getElementById('recipe-form').dataset.editingId;
+        
+        // Remove cancel button if it exists
+        const cancelBtn = document.getElementById('cancel-edit-btn');
+        if (cancelBtn) cancelBtn.remove();
+        
+        // Reset form header
+        document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
+        
+        // Clear file upload status
+        const fileUploadStatus = document.getElementById('file-upload-status');
+        if (fileUploadStatus) {
+            fileUploadStatus.textContent = '';
+            fileUploadStatus.className = '';
+        }
+        
+        // Reload recipes and switch tab
+        loadRecipes();
+        switchTab('my-recipes');
+        showTemporaryStatusMessage(
+            `Recipe "${savedRecipe.name}" ${submitButton.innerHTML.includes('Update') ? 'updated' : 'saved'} successfully!`, 
+            'success'
+        );
     }
 }
 
@@ -461,23 +533,37 @@ async function deleteRecipe(id) {
 // View recipe details (uses local cache)
 function viewRecipe(id) {
     const recipe = currentRecipes.find(r => r.id == id);
+    if (!recipe) {
+        alert('Recipe details not found. The list might be updating, please try again shortly.');
+        return;
+    }
 
-    if (recipe) {
-        let ingredientsString = "No ingredients listed.";
-        if (recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
-            ingredientsString = "- " + recipe.ingredients.join('\n- ');
-        } else if (typeof recipe.ingredients === 'string' && recipe.ingredients.trim()) {
-             // Fallback if somehow it's still a string
-             ingredientsString = recipe.ingredients;
-        }
+    let ingredientsString = "No ingredients listed.";
+    if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
+        ingredientsString = recipe.ingredients.map(i => `- ${i}`).join('\n');
+    } else if (typeof recipe.ingredients === 'string' && recipe.ingredients.trim()) {
+        ingredientsString = recipe.ingredients;
+    }
 
-        alert(`
+    const isOwner = typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID;
+
+    let buttonsHTML = '<button onclick="closeAlert()">OK</button>';
+    if (isOwner) {
+        buttonsHTML = `
+            <button onclick="editRecipe(${recipe.id})" style="margin-right:10px;">
+                <i class="fas fa-edit"></i> Edit
+            </button>
+            <button onclick="closeAlert()">OK</button>
+        `;
+    }
+
+    alert(`
 --------------------
 RECIPE: ${recipe.name}
 --------------------
 Category: ${recipe.category}
 Time: ${recipe.time} minutes
-Added/Updated: ${recipe.date} ${recipe.author ? '\nAuthor: '+recipe.author : ''}
+Added/Updated: ${recipe.date} ${recipe.author ? '\nAuthor: ' + recipe.author : ''}
 
 INGREDIENTS:
 ${ingredientsString}
@@ -485,10 +571,112 @@ ${ingredientsString}
 INSTRUCTIONS:
 ${recipe.instructions || 'No instructions provided.'}
 --------------------
-        `);
-    } else {
-        alert('Recipe details not found. The list might be updating, please try again shortly.');
+    `, buttonsHTML);
+}
+
+// Add function to handle editing
+function editRecipe(id) {
+    const recipe = currentRecipes.find(r => r.id == id);
+    if (!recipe) {
+        alert('Recipe not found for editing.');
+        return;
     }
+
+    document.getElementById('recipe-name').value = recipe.name;
+    document.getElementById('recipe-category').value = recipe.category;
+    document.getElementById('recipe-time').value = recipe.time;
+    document.getElementById('recipe-ingredients').value = Array.isArray(recipe.ingredients) ? 
+        recipe.ingredients.join('\n') : recipe.ingredients;
+    document.getElementById('recipe-instructions').value = recipe.instructions;
+
+    document.getElementById('recipe-form').dataset.editingId = id;
+
+    document.querySelector('#add h2').innerHTML = '<i class="fas fa-edit"></i> Edit Recipe';
+    document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Update Recipe';
+
+    if (!document.getElementById('cancel-edit-btn')) {
+        const submitBtn = document.querySelector('#add button[type="submit"]');
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.id = 'cancel-edit-btn';
+        cancelBtn.className = 'btn btn-secondary';
+        cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancel';
+        cancelBtn.onclick = cancelEdit;
+        submitBtn.insertAdjacentElement('afterend', cancelBtn);
+    }
+
+    switchTab('add');
+}
+
+// Cancel edit mode
+function cancelEdit() {
+    const form = document.getElementById('recipe-form');
+    delete form.dataset.editingId;
+    form.reset();
+
+    document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
+    document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+
+    const cancelBtn = document.getElementById('cancel-edit-btn');
+    if (cancelBtn) cancelBtn.remove();
+
+    const fileUploadStatus = document.getElementById('file-upload-status');
+    if (fileUploadStatus) {
+        fileUploadStatus.textContent = '';
+        fileUploadStatus.className = '';
+    }
+}
+
+// Override default alert
+// Override default alert
+const originalAlert = window.alert;
+window.alert = function(message, buttonsHTML) {
+    if (buttonsHTML) {
+        const alertBox = document.createElement('div');
+        alertBox.className = 'custom-alert';
+        alertBox.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 10000;
+            max-width: 80%;
+            max-height: 80vh;
+            overflow: auto;
+        `;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.style.marginBottom = '15px';
+        messageDiv.style.whiteSpace = 'pre-wrap';
+        messageDiv.textContent = message;
+        alertBox.appendChild(messageDiv);
+
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.style.textAlign = 'right';
+        buttonsDiv.innerHTML = buttonsHTML;
+        alertBox.appendChild(buttonsDiv);
+
+        document.body.appendChild(alertBox);
+
+        const firstButton = buttonsDiv.querySelector('button');
+        if (firstButton) firstButton.focus();
+    } else {
+        originalAlert(message);
+    }
+};
+
+// Modify handleFormSubmit to handle update if editing
+// Inside handleFormSubmit, before calling addRecipeToServer, add this:
+const editingId = document.getElementById('recipe-form').dataset.editingId;
+if (editingId) {
+    newRecipeData.id = parseInt(editingId, 10);
+    // updateRecipeToServer(newRecipeData); // You’d implement this on the backend
+} else {
+    // continue with addRecipeToServer(newRecipeData);
 }
 
 // Display share preview (uses local cache)
@@ -747,6 +935,13 @@ function shareRecipe(platform) {
     }
     if (shareUrl) {
         window.open(shareUrl, '_blank', 'noopener,noreferrer,width=600,height=400');
+    }
+}
+
+function closeAlert() {
+    const alertBox = document.querySelector('.custom-alert');
+    if (alertBox) {
+        alertBox.remove();
     }
 }
 

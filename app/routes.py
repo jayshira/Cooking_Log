@@ -179,6 +179,8 @@ def add_recipe():
         print(f"Error adding recipe (database issue): {e}")
         return jsonify({"error": "Failed to add recipe"}), 500
 
+
+
 @main.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
 @login_required
 def delete_recipe_api(recipe_id):
@@ -203,6 +205,47 @@ def delete_recipe_api(recipe_id):
         db.session.rollback()
         print(f"Error deleting recipe {recipe_id}: {e}")
         return jsonify({"error": "Failed to delete recipe"}), 500
+
+
+
+
+@main.route('/api/recipes/<int:recipe_id>', methods=['PUT'])
+@login_required
+def update_recipe(recipe_id):
+    """API endpoint to update an existing recipe."""
+    recipe = Recipe.query.get_or_404(recipe_id)
+    
+    # Authorization Check
+    if recipe.user_id != current_user.id:
+        return jsonify({"error": "Unauthorized to edit this recipe"}), 403
+
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    try:
+        # Update only the fields that are provided
+        if 'name' in data:
+            recipe.name = data['name']
+        if 'category' in data:
+            recipe.category = data['category']
+        if 'time' in data:
+            recipe.time = int(data['time'])
+        if 'ingredients' in data:
+            recipe.ingredients = data['ingredients']  # Uses the setter
+        if 'instructions' in data:
+            recipe.instructions = data['instructions']
+        if 'image' in data:
+            recipe.image = data['image']
+        
+        db.session.commit()
+        return jsonify(recipe.to_dict()), 200
+    except (ValueError, TypeError) as e:
+        db.session.rollback()
+        return jsonify({"error": "Invalid data format"}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Failed to update recipe"}), 500
 
 
 # --- Placeholders (Update or Remove as needed) ---
