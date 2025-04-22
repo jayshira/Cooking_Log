@@ -313,6 +313,39 @@ select option {
 .alert-danger  { color: var(--danger-text);  background-color: var(--danger-bg);  border-color: var(--danger-border); }
 .alert-info    { color: var(--info-text);    background-color: var(--info-bg);    border-color: var(--info-border); }
 
+/* --- Custom Modal Alert --- */
+.custom-alert {
+    background-color: var(--white) !important;
+    border: 1px solid var(--light-grey) !important;
+    border-radius: 8px !important;
+    padding: 25px !important;
+    max-width: 600px !important;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2) !important;
+    z-index: 1050 !important;
+}
+
+.custom-alert button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    background-color: var(--primary-color);
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.custom-alert button:hover {
+    background-color: var(--secondary-color);
+}
+
+.custom-alert button:focus {
+    outline: 2px solid var(--accent-color);
+}
+
+body > .custom-alert {
+    position: fixed !important;
+}
+
 
 /* --- Auth Container (Login/Signup Pages) --- */
 .auth-container {
