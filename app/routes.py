@@ -29,6 +29,22 @@ def home():
     # Pass logs and streak to the template
     return render_template('home.html', current_user=current_user, recent_logs=recent_logs, current_streak=streak)
 
+# --- NEW: Route to view a specific recipe ---
+@main.route('/view_recipe/<int:recipe_id>')
+@login_required
+def view_recipe(recipe_id):
+    """API endpoint to get a specific recipe by ID."""
+    try:
+        recipe = Recipe.query.get_or_404(recipe_id)
+        # Verify that the recipe belongs to the current user
+        if recipe.user_id != current_user.id:
+            flash('You can only view your own recipes.', 'warning')
+            return redirect(url_for('main.home'))
+        return render_template('view_recipe.html', recipe=recipe)
+    except Exception as e:
+        print(f"Error fetching recipe {recipe_id}: {e}")
+        return jsonify({"error": "Failed to fetch recipe"}), 500
+
 # --- NEW: Route to start the cooking session page ---
 @main.route('/start_cooking/<int:recipe_id>')
 @login_required

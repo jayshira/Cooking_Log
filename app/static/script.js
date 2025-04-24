@@ -198,36 +198,37 @@ async function deleteRecipeFromServer(recipeId) {
     }
 }
 
-async function deleteRecipeFromServer(recipeId) {
-    // No changes needed here, authorization is handled by backend
-     try {
-        const response = await fetch(`/api/recipes/${recipeId}`, {
-            method: 'DELETE',
-        });
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-             if (response.status === 401) {
-                 alert("Your session may have expired. Please log in again.");
-                 window.location.href = '/login';
-                 return false;
-             }
-             if (response.status === 403) { // Forbidden
-                throw new Error(`Authorization error: ${errorData.error}`);
-             }
-             if (response.status === 409) { // Conflict (e.g., recipe has logs)
-                 throw new Error(`${errorData.error}`); // Display the specific error from backend
-             }
-            throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
-        }
-        currentRecipes = currentRecipes.filter(r => r.id !== recipeId);
-        return true;
-    } catch (error) {
-        console.error(`Error deleting recipe ${recipeId}:`, error);
-        // Display specific error message from backend if available
-        alert(`Failed to delete recipe: ${error.message}`);
-        return false;
-    }
-}
+/* COMMENTED OUT SINCE TWO OF THE SAME FUNCTION IS MADE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) - jason*/
+// async function deleteRecipeFromServer(recipeId) {
+//     // No changes needed here, authorization is handled by backend
+//      try {
+//         const response = await fetch(`/api/recipes/${recipeId}`, {
+//             method: 'DELETE',
+//         });
+//         if (!response.ok) {
+//             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+//              if (response.status === 401) {
+//                  alert("Your session may have expired. Please log in again.");
+//                  window.location.href = '/login';
+//                  return false;
+//              }
+//              if (response.status === 403) { // Forbidden
+//                 throw new Error(`Authorization error: ${errorData.error}`);
+//              }
+//              if (response.status === 409) { // Conflict (e.g., recipe has logs)
+//                  throw new Error(`${errorData.error}`); // Display the specific error from backend
+//              }
+//             throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
+//         }
+//         currentRecipes = currentRecipes.filter(r => r.id !== recipeId);
+//         return true;
+//     } catch (error) {
+//         console.error(`Error deleting recipe ${recipeId}:`, error);
+//         // Display specific error message from backend if available
+//         alert(`Failed to delete recipe: ${error.message}`);
+//         return false;
+//     }
+// }
 
 // --- UI Rendering ---
 
@@ -258,7 +259,8 @@ function renderRecipeCard(recipe) {
                 <strong>Ingredients:</strong> ${ingredientsPreview || 'No ingredients listed'}
             </p>
             <div class="recipe-actions">
-                <button class="btn btn-secondary btn-sm" onclick="viewRecipe(${recipe.id})">
+                <!-- View Button (always visible maybe?) -->
+                <a href="/view_recipe/${recipe.id}" class="btn btn-secondary btn-sm">
                     <i class="fas fa-eye"></i> View
                 </button>
 
@@ -516,6 +518,7 @@ function postSaveActions(savedRecipe, submitButton) {
 
 // Delete recipe function (called by button)
 async function deleteRecipe(id) {
+    console.log(id);
     // Find recipe name for confirmation message
     const recipe = currentRecipes.find(r => r.id === id);
     const recipeName = recipe ? `"${recipe.name}"` : "this recipe";
@@ -530,49 +533,40 @@ async function deleteRecipe(id) {
     }
 }
 
-// View recipe details (uses local cache)
-function viewRecipe(id) {
-    const recipe = currentRecipes.find(r => r.id == id);
-    if (!recipe) {
-        alert('Recipe details not found. The list might be updating, please try again shortly.');
-        return;
-    }
+/* COMMENTED FOR NOW SINCE THERE IS A NEW VIEW RECIPE PAGE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) - jason */
+// View recipe details (uses local cache) 
+// function viewRecipe(id) {
+//     const recipe = currentRecipes.find(r => r.id == id);
 
-    let ingredientsString = "No ingredients listed.";
-    if (recipe.ingredients && Array.isArray(recipe.ingredients)) {
-        ingredientsString = recipe.ingredients.map(i => `- ${i}`).join('\n');
-    } else if (typeof recipe.ingredients === 'string' && recipe.ingredients.trim()) {
-        ingredientsString = recipe.ingredients;
-    }
+//     if (recipe) {
+//         let ingredientsString = "No ingredients listed.";
+//         if (recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
+//             ingredientsString = "- " + recipe.ingredients.join('\n- ');
+//         } else if (typeof recipe.ingredients === 'string' && recipe.ingredients.trim()) {
+//              // Fallback if somehow it's still a string
+//              ingredientsString = recipe.ingredients;
+//         }
 
-    const isOwner = typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID;
+//         alert(`
+// --------------------
+// RECIPE: ${recipe.name}
+// --------------------
+// Category: ${recipe.category}
+// Time: ${recipe.time} minutes
+// Added/Updated: ${recipe.date} ${recipe.author ? '\nAuthor: '+recipe.author : ''}
 
-    let buttonsHTML = '<button onclick="closeAlert()">OK</button>';
-    if (isOwner) {
-        buttonsHTML = `
-            <button onclick="editRecipe(${recipe.id})" style="margin-right:10px;">
-                <i class="fas fa-edit"></i> Edit
-            </button>
-            <button onclick="closeAlert()">OK</button>
-        `;
-    }
+// INGREDIENTS:
+// ${ingredientsString}
 
-    alert(`
---------------------
-RECIPE: ${recipe.name}
---------------------
-Category: ${recipe.category}
-Time: ${recipe.time} minutes
-Added/Updated: ${recipe.date} ${recipe.author ? '\nAuthor: ' + recipe.author : ''}
+// INSTRUCTIONS:
+// ${recipe.instructions || 'No instructions provided.'}
+// --------------------
+//         `);
+//     } else {
+//         alert('Recipe details not found. The list might be updating, please try again shortly.');
+//     }
+// }
 
-INGREDIENTS:
-${ingredientsString}
-
-INSTRUCTIONS:
-${recipe.instructions || 'No instructions provided.'}
---------------------
-    `, buttonsHTML);
-}
 
 // Add function to handle editing
 function editRecipe(id) {
