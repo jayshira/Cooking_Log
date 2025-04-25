@@ -262,7 +262,7 @@ function renderRecipeCard(recipe) {
                 <!-- View Button (always visible maybe?) -->
                 <a href="/view_recipe/${recipe.id}" class="btn btn-secondary btn-sm">
                     <i class="fas fa-eye"></i> View
-                </button>
+                </a>
 
                 ${isOwner ? `
                 <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})">
