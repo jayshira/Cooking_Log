@@ -120,9 +120,6 @@
                         <a href="{{ url_for('main.start_cooking_session', recipe_id=recipe.id) }}" class="btn btn-secondary btn-block mb-2 button">
                             <i class="fas fa-utensils"></i> Start Cooking
                         </a>
-                        <a href="{{ url_for('main.home') }}?edit={{ recipe.id }}" class="btn btn-primary btn-block mb-2 button">
-                            <i class="fas fa-edit"></i> Edit Recipe
-                        </a>
                         <button class="btn btn-danger btn-block button">
                             <i class="fas fa-trash"></i> Delete Recipe
                         </button>

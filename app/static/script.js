@@ -425,26 +425,38 @@ async function saveRecipe(recipeData, isEditing, submitButton) {
     try {
         if (isEditing) {
             // Update existing recipe
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (!csrfToken) {
+                console.error("CSRF token not found in meta tag!");
+                alert("Action failed: Security token missing. Please refresh the page.");
+                submitButton.disabled = false;
+                return;
+            }
+        
             const response = await fetch(`/api/recipes/${isEditing}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
                 body: JSON.stringify(recipeData)
             });
-            
+        
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+        
             savedRecipe = await response.json();
-            // Update local cache
             const index = currentRecipes.findIndex(r => r.id == isEditing);
             if (index !== -1) {
                 currentRecipes[index] = savedRecipe;
             }
         } else {
-            // Create new recipe
+            // ADD NEW recipe (POST)
             savedRecipe = await addRecipeToServer(recipeData);
         }
+        
+        
 
         postSaveActions(savedRecipe, submitButton);
     } catch (error) {
