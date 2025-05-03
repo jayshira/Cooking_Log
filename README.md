@@ -1,67 +1,80 @@
+Okay, let's integrate the required information into your existing README.md. I'll add the team table and the placeholder for test instructions.
+
 # KitchenLog
 
 **KitchenLog** is your personal digital cookbook and cooking diary that not only serves as a repository for your favorite recipes but also tracks your cooking sessions, offers data-driven insights, and makes it easy to share culinary inspiration with friends. Whether you’re a budding chef or a seasoned cook, KitchenLog helps you discover your cooking patterns, improve your skills, and celebrate your culinary achievements.
 
 ## Project Overview
 
-KitchenLog is a web application that allows users to:
-- **Store and Manage Recipes:** Add new recipes (manually or via simple import), edit existing ones, and organize them using tags/cuisines.
-- **Log Cooking Sessions:** Record each cooking instance with options to rate, add session notes, and even set a timer to track the duration.
-- **Analyze Cooking Habits:** Automatically generate statistics about your cooking frequency, most cooked dishes, average ratings, and your current cooking streak (i.e., how many days in a row you’ve cooked).
-- **Share Culinary Success:** Selectively share recipes, cooking logs, or insightful stat snapshots with friends. A dedicated share link feature allows recipients to directly import recipes into their own KitchenLog accounts.
+KitchenLog is a web application built with Flask (Python) on the backend and standard HTML, CSS, and JavaScript (including Fetch API for dynamic updates) on the frontend. It uses SQLAlchemy for database interaction (SQLite) and Flask-Login/Flask-Bcrypt/Flask-WTF for user authentication and security.
+
+Users can:
+- **Store and Manage Recipes:** Add new recipes (manually or via simple import - *future feature*), edit existing ones, and organize them using categories. Recipe ingredients are stored flexibly as a JSON list of strings.
+- **Log Cooking Sessions:** Record each cooking instance for owned recipes, including date, optional rating, notes, and an integrated timer to track duration.
+- **Analyze Cooking Habits:** Automatically tracks the user's current cooking streak (consecutive days cooked). Displays recent cooking activity. *(Future: Add dashboard with more stats/visualizations).*
+- **Share Culinary Success:** Selectively share recipes or stats. *(Sharing implementation details TBD - public links or user-to-user)*.
+
+The application follows a Multi-Page Application (MPA) architecture, where Flask renders distinct HTML pages for major views, enhanced with client-side JavaScript for dynamic content loading (e.g., recipe list) and API interactions (adding/deleting recipes, logging sessions).
+
+## Team Members
+
+| UWA ID   | Name            | GitHub Username                                     |
+| :------- | :-------------- | :-------------------------------------------------- |
+| 23868133 | Alison Barboza  | [BiliBiliMay](https://github.com/BiliBiliMay)       |
+| 24078797 | Jason Yulfan    | [jayshira](https://github.com/jayshira)             |
+| 22965587 | Jiwon Song      | [BlossomXD1](https://github.com/BlossomXD1)         |
+| 23769653 | Hunter Wang     | *(Pending Confirmation)*                            |
+
+*(Note: Please update Hunter Wang's GitHub username when confirmed.)*
 
 ## Key Features
 
+*(Existing Key Features section remains largely the same, but you might want to update it based on the implemented Cooking Log feature vs. the original plan)*
+
 ### Introductory View (/)
-- **Warm, Inviting Design:** Features kitchen-inspired imagery, clear typography, and a prominent logo.
-- **User Onboarding:** Includes a headline, brief description, and immediate access to login and sign-up forms.
+- Displays a welcome message and provides links/buttons for Login and Sign Up.
 
-### My Kitchen View (/mykitchen)
+### User Authentication (/auth/*)
+- Secure user signup and login using Flask-Login, Flask-Bcrypt, and Flask-WTF for validation and CSRF protection.
+
+### My Kitchen View (/home)
 - **Recipe Management:**
-  - **Create & Edit:** Easily add new recipes or modify existing ones with fields for title, description, prep time, cook time, ingredients, instructions, and tags.
-  - **Dynamic List:** A searchable/filterable grid/list displays your recipes with options to edit or delete.
-- **Cooking Log:**
-  - **Log Cooking Sessions:** Select a recipe, log details such as date cooked, actual time spent, and rate your session.
-  - **Session Timer:** Integrated timer functionality to track the length of each cooking session.
-  - **Cooking Streak:** Automatically count the number of consecutive days the user has cooked.
-  - **Instant Feedback:** Confirmation messages and a recent activity log for quick reference.
+    - **Add Recipe:** A dedicated tab with a form to add new recipes (name, category, time, ingredients, instructions, optional image). Uses Fetch API for submission.
+    - **View Recipes:** Dynamically loaded list/grid of the user's recipes. Includes search functionality.
+    - **Edit Recipe:** *(Currently not implemented/functional)* Ability to modify existing recipes.
+    - **Delete Recipe:** Button to delete recipes (protected by CSRF, prevents deletion if cooking logs exist).
+- **Cooking Log Integration:**
+    - **Log Session:** "Cook" button on owned recipes links to a dedicated `/start_cooking/<id>` page.
+    - **Session Page:** Displays recipe details, provides an interactive timer, and includes a form to log date cooked, rating, and notes. Submits to `/log_cooking/<id>`.
+    - **Recent Activity:** Displays the last few cooking log entries on the main `/home` view.
+    - **Cooking Streak:** Displays the user's current consecutive day cooking streak on the main `/home` view.
+- **Recipe Stats:** Tab showing basic statistics derived from the user's saved recipes (total count, category distribution, time analysis) with Chart.js visualizations.
+- **Share:** Tab allowing users to select a recipe and generate basic sharing information *(Full sharing mechanism TBD)*.
 
-### Visualize Data View (/dashboard or /insights)
-- **Interactive Dashboard:** Offers a set of analytics including:
-  - **Key Metrics:** Total meals logged, unique recipes cooked, average ratings, and current cooking streak.
-  - **Visualizations:** Charts such as bar graphs for most frequently cooked recipes, line charts/calendar heatmaps for cooking frequency, pie charts for cuisine breakdown, and rating distribution charts.
-  - **Detailed Journal:** A filterable history of all cooking sessions for a closer look at your culinary journey.
-- **Shared Content:** A dedicated section to view and interact with content shared by your friends.
-
-### Share Data View (/share)
-- **Flexible Sharing Options:** Users can choose to share:
-  - A complete recipe.
-  - Specific cooking log entries.
-  - A snapshot of their cooking stats.
-- **Share Links:** Users can generate shareable links that let recipients import recipes directly into their own KitchenLog accounts.
-- **Manage Shares:** Easily view, manage, and revoke shared items.
+*(Remove references to Visualize Data View /dashboard and Share Data View /share as separate pages if they are now integrated tabs in /home, or update as needed)*
 
 ## Technologies Used
 
 - **Frontend:**
-  - HTML, CSS, JavaScript
-  - [Bootstrap](https://getbootstrap.com/) (or Tailwind/SemanticUI/Foundation as chosen)
-  - jQuery for dynamic DOM manipulation and AJAX calls
-  - Chart.js (or equivalent) for interactive data visualizations
-
+    - HTML, CSS, JavaScript
+    - Fetch API for AJAX calls
+    - Chart.js for data visualizations
 - **Backend:**
-  - Flask as the web framework
-  - Flask-Login for managing user authentication
-  - AJAX/WebSockets for asynchronous data exchange
-  - SQLite managed via SQLAlchemy as the database
- 
+    - Python 3
+    - Flask (including Blueprints)
+    - SQLAlchemy (with SQLite)
+    - Flask-Login (User session management)
+    - Flask-Bcrypt (Password hashing)
+    - Flask-WTF (Form handling, CSRF protection)
+- **Database:**
+    - SQLite (managed via SQLAlchemy)
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
 - Python (version 3.8 or higher recommended)
-- `pip` (Python package installer, usually included with Python)
+- `pip` (Python package installer)
 - Git (for cloning the repository)
-- Note: If running "python -m venv env" returns an error such as "zsh: command not found: python", type "python3 -m venv env" instead. Similarly, to run Python scripts, use "python3 run.py" if python run.py does not work.
 
 ## Setup Instructions
 
@@ -69,82 +82,60 @@ Follow these steps to set up the project locally:
 
 1.  **Clone the Repository:**
     ```bash
-    git clone <your-repository-url> # Replace with your actual repository URL
-    cd KitchenLog # Or your repository's folder name
+    # Ensure you are cloning your private repository URL
+    git clone <your-private-repository-url>
+    cd <repository-folder-name> # e.g., cd KitchenLog
     ```
 
 2.  **Create and Activate a Virtual Environment:**
-    It's highly recommended to use a virtual environment to manage project dependencies.
-
+    (Highly Recommended)
     ```bash
-    # Create the virtual environment (use 'python3' if 'python' links to Python 2)
+    # Create (use 'python3' if needed)
     python -m venv env
 
-    # Activate the virtual environment:
-    # On macOS/Linux (bash/zsh):
+    # Activate
+    # macOS/Linux:
     source env/bin/activate
-    # On Windows (Command Prompt):
-    # .\env\Scripts\activate
-    # On Windows (PowerShell):
+    # Windows (Git Bash/WSL):
+    # source env/Scripts/activate
+    # Windows (Command Prompt):
+    # .\env\Scripts\activate.bat
+    # Windows (PowerShell):
     # .\env\Scripts\Activate.ps1
     ```
-    Your terminal prompt should now show `(env)` at the beginning.
+    Your prompt should show `(env)`.
 
 3.  **Install Dependencies:**
-    Install all the required Python packages listed in `requirements.txt`. Make sure your virtual environment is active before running this command.
     ```bash
     pip install -r requirements.txt
     ```
 
 4.  **Database Setup:**
-    The application uses SQLite. The database file (`recipes.db`) and the necessary tables (`User`, `Recipe`) will be automatically created in the project's root directory the first time you run the application, thanks to the `db.create_all()` command within the app factory (`app/__init__.py`).
-    *(Note: For more complex database changes later, integrating Flask-Migrate is recommended.)*
-    
+    The application uses SQLite. The database file (`instance/recipes.db` or `recipes.db` depending on setup) and tables will be automatically created/checked by the `db.create_all()` command in `app/__init__.py` when the application first runs.
+    *(Note: If you encounter issues after model changes, you might need to delete the existing `.db` file and let it be recreated, which **will delete all data**.)*
+
 ## Running the Application
 
 1.  **Ensure Virtual Environment is Active:**
-    If you haven't already, activate the virtual environment:
     ```bash
     source env/bin/activate # Or your OS equivalent
     ```
 
 2.  **Start the Flask Development Server:**
-    Run the `run.py` script from the project's root directory:
+    From the project's root directory (where `run.py` is):
     ```bash
     python run.py
+    # Or using the Flask CLI (if configured):
+    # flask run
     ```
 
 3.  **Access the Application:**
     Open your web browser and navigate to:
     [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
-    (Or `http://localhost:5000/`)
+    You should see the KitchenLog welcome page. Use the links to sign up or log in. The main user dashboard is at `/home` after logging in.
 
-    You should see the KitchenLog homepage. You can now sign up for an account and log in.
+## Running Tests
 
-## Project Structure
-
-```text
-KitchenLog/
-├── app/
-│   ├── static/
-│   │   ├── script.js
-│   │   └── style.css
-│   ├── templates/
-│   │   ├── auth/
-│   │   │   ├── login.html
-│   │   │   └── signup.html
-│   │   ├── index.html
-│   │   └── home.html
-│   ├── __init__.py     # Application Factory
-│   ├── auth.py         # Authentication routes (auth blueprint)
-│   ├── models.py       # Database models
-│   └── routes.py       # Main application routes (main blueprint)
-├── env/                # Virtual environment directory
-├── config.py           # Configuration settings
-├── recipes.db          # SQLite database file
-├── requirements.txt    # Python dependencies
-├── run.py              # Script to run the Flask application
-├── README.md           # This file
-└── LICENSE             # (Optional) License file
+    we havent written test files...
 
 
