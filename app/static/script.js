@@ -1,8 +1,8 @@
 // static/script.js
 
 // Global variables for charts
-let categoryChart = null;
-let timeChart = null;
+let topRecipesChart = null;
+let frequencyChart = null;
 let currentRecipes = []; // Cache recipes locally for search/share dropdowns
 
 // --- API Helper Functions ---
@@ -727,54 +727,52 @@ function displaySharePreview(recipeId) {
 // --- Stats and Charts (uses local cache) ---
 
 function updateStats() {
-    const recipes = currentRecipes; // Use the cached data
-    const totalRecipes = recipes.length;
+    // Use the global LOG_STATS_DATA parsed from the template
+    const stats = LOG_STATS_DATA;
 
-    // Check if stat elements exist before updating
-    const totalRecipesEl = document.getElementById('total-recipes');
-    const mostCookedEl = document.getElementById('most-cooked');
-    const totalTimeEl = document.getElementById('total-time');
-    const avgTimeEl = document.getElementById('avg-time');
+    // Update the stat display elements
+    const totalSessionsEl = document.getElementById('total-sessions');
+    const mostFrequentRecipeEl = document.getElementById('most-frequent-recipe');
+    const mostFrequentCountEl = document.getElementById('most-frequent-count');
+    const totalTimeLoggedEl = document.getElementById('total-time-logged');
+    const averageRatingEl = document.getElementById('average-rating');
 
-    if (totalRecipesEl) totalRecipesEl.textContent = totalRecipes;
+    if (totalSessionsEl) totalSessionsEl.textContent = stats.total_sessions || 0;
 
-    if (totalRecipes > 0) {
-        const categoryCounts = recipes.reduce((acc, recipe) => {
-            acc[recipe.category] = (acc[recipe.category] || 0) + 1;
-            return acc;
-        }, {});
-        const mostCommonCategory = Object.keys(categoryCounts).reduce((a, b) =>
-            categoryCounts[a] > categoryCounts[b] ? a : b, Object.keys(categoryCounts)[0] || '-'
-        );
-         if (mostCookedEl) mostCookedEl.textContent = mostCommonCategory || '-';
-
-        const totalTime = recipes.reduce((sum, recipe) => sum + (recipe.time || 0), 0); // Ensure time exists
-        const avgTime = totalRecipes > 0 ? totalTime / totalRecipes : 0;
-        if (totalTimeEl) totalTimeEl.textContent = totalTime;
-        if (avgTimeEl) avgTimeEl.textContent = avgTime.toFixed(1);
-
-        // Check if chart canvases exist before updating
-        if (document.getElementById('category-chart')) {
-             updateCategoryChart(categoryCounts);
-        }
-        if (document.getElementById('time-chart')) {
-            updateTimeChart(recipes);
-        }
-
-    } else {
-        if (mostCookedEl) mostCookedEl.textContent = '-';
-        if (totalTimeEl) totalTimeEl.textContent = '0';
-        if (avgTimeEl) avgTimeEl.textContent = '0';
-
-        // Clear charts if no data
-        if (document.getElementById('category-chart')) {
-            updateCategoryChart({});
-        }
-        if (document.getElementById('time-chart')) {
-            updateTimeChart([]);
+    if (mostFrequentRecipeEl) {
+        if (stats.most_frequent_recipe && stats.most_frequent_recipe[1] > 0) {
+            mostFrequentRecipeEl.textContent = stats.most_frequent_recipe[0]; // Name
+            if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe[1]} logs)`;
+        } else {
+            mostFrequentRecipeEl.textContent = '-';
+            if (mostFrequentCountEl) mostFrequentCountEl.textContent = '';
         }
     }
+
+    if (totalTimeLoggedEl) {
+        const totalSeconds = stats.total_time_logged_seconds || 0;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        totalTimeLoggedEl.textContent = `${hours}h ${minutes}m`;
+    }
+
+    if (averageRatingEl) {
+        if (stats.average_rating && stats.average_rating > 0) {
+            averageRatingEl.textContent = stats.average_rating.toFixed(1) + ' ★';
+        } else {
+            averageRatingEl.textContent = 'N/A';
+        }
+    }
+
+    // Update the charts using the data from LOG_STATS_DATA
+    if (document.getElementById('top-recipes-chart')) {
+        updateTopRecipesChart(stats.top_recipes_data || []);
+    }
+    if (document.getElementById('frequency-chart')) {
+        updateMonthlyFrequencyChart(stats.monthly_frequency_data || []);
+    }
 }
+
 
 // --- Chart Update Functions --- 
 function updateCategoryChart(categoryCounts) {
@@ -817,6 +815,127 @@ function updateCategoryChart(categoryCounts) {
                             if (label) { label += ': '; }
                             if (context.parsed !== null) { label += context.parsed; }
                             return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+function updateTopRecipesChart(topRecipesData) {
+    const ctx = document.getElementById('top-recipes-chart')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = topRecipesData.map(item => item.name);
+    const data = topRecipesData.map(item => item.count);
+
+    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; // Use first 5 theme colors
+
+    if (topRecipesChart) {
+        topRecipesChart.destroy(); // Destroy previous chart instance
+    }
+
+    topRecipesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Number of Logs',
+                data: data,
+                backgroundColor: backgroundColors.slice(0, labels.length),
+                borderColor: backgroundColors.map(c => c + 'B3'),
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Make it a horizontal bar chart
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { // Note: x-axis for values in horizontal bar chart
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, color: 'var(--grey)' }, // Ensure integer steps if log counts are low
+                    grid: { color: '#eee' }
+                },
+                y: { // Note: y-axis for labels
+                    ticks: { color: 'var(--grey)' },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false }, // No legend needed for single dataset
+                tooltip: {
+                    backgroundColor: 'var(--dark-color)',
+                    titleColor: 'var(--white)',
+                    bodyColor: 'var(--white)',
+                    callbacks: {
+                        label: function(context) {
+                            return ` Logs: ${context.raw || 0}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateMonthlyFrequencyChart(frequencyData) {
+    const ctx = document.getElementById('frequency-chart')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = frequencyData.map(item => item.month); // Should be YYYY-MM sorted
+    const data = frequencyData.map(item => item.count);
+
+    // Consistent color or cycle through a few
+    const barColor = '#FF7B54'; // Primary color
+
+    if (frequencyChart) {
+        frequencyChart.destroy(); // Destroy previous instance
+    }
+
+    frequencyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Sessions Logged',
+                data: data,
+                backgroundColor: barColor,
+                borderColor: barColor + 'B3',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, color: 'var(--grey)' }, // Integer steps
+                    grid: { color: '#eee' }
+                },
+                x: {
+                    ticks: { color: 'var(--grey)' },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                     backgroundColor: 'var(--dark-color)',
+                     titleColor: 'var(--white)',
+                     bodyColor: 'var(--white)',
+                     callbacks: {
+                        title: function(context) {
+                             // Format title e.g., "October 2023"
+                             const [year, month] = context[0].label.split('-');
+                             const date = new Date(year, month - 1); // Month is 0-indexed
+                             return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                        },
+                        label: function(context) {
+                            return ` Sessions: ${context.raw || 0}`;
                         }
                     }
                 }
@@ -966,66 +1085,90 @@ function closeAlert() {
     }
 }
 
+// static/script.js
+
+// ... (Global variables and functions declared above this block) ...
+// e.g., topRecipesChart, frequencyChart, currentRecipes,
+// fetchRecipes, addRecipeToServer, deleteRecipeFromServer,
+// renderRecipeCard, loadRecipes, checkShareDropdown, handleFormSubmit,
+// saveRecipe, postSaveActions, deleteRecipe, editRecipe, cancelEdit,
+// updateStats, updateTopRecipesChart, updateMonthlyFrequencyChart,
+// switchTab, handleFileChange, shareRecipe, closeAlert, etc.
+
+
 // --- Initial Setup ---
 document.addEventListener('DOMContentLoaded', function() {
 
     // Tab switching
-    const tabs = document.querySelectorAll('.tab');
-    const tabContents = document.querySelectorAll('.tab-content');
+    const tabs = document.querySelectorAll('.tab'); // Get all tab elements
+    const tabContents = document.querySelectorAll('.tab-content'); // Get all content elements
+
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
-             // If the tab is disabled, do nothing
+             console.log('Tab clicked:', tab.getAttribute('data-tab')); // For debugging
+
+            // If the tab is disabled, do nothing
             if (tab.classList.contains('disabled')) return;
 
-            const tabId = tab.getAttribute('data-tab');
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            tabContents.forEach(c => c.classList.remove('active'));
+            const tabId = tab.getAttribute('data-tab'); // Get the ID of the content to show
 
+            // --- Manage .active class on TABS ---
+            tabs.forEach(t => t.classList.remove('active')); // Remove active from ALL tabs
+            tab.classList.add('active'); // Add active to the CLICKED tab
+
+            // --- Manage .active class on TAB CONTENTS ---
+            tabContents.forEach(content => {
+                 content.classList.remove('active'); // Remove active from ALL content divs - HIDES THEM
+            });
+
+            // Find the specific content div to activate
             const activeContent = document.getElementById(tabId);
              if (activeContent) {
-                 activeContent.classList.add('active');
-                 // Update recipe stats only when that specific tab is viewed
-                 if (tabId === 'recipe-stats') {
-                     updateStats(); // Re-calculate stats based on currentRecipes
+                 activeContent.classList.add('active'); // Add active ONLY to the target content div - SHOWS IT
+
+                 // Update stats only when that specific tab is viewed
+                 if (tabId === 'recipe-stats') { // Ensure this ID matches your HTML
+                     console.log('Updating stats for tab:', tabId); // For debugging
+                     updateStats(); // Populate stats and render charts
                  }
              } else {
-                 // console.warn(`Tab content with ID "${tabId}" not found.`);
+                  console.warn(`Tab content with ID "${tabId}" not found.`);
              }
         });
-    });
+    }); // End of tabs.forEach
 
     // File upload trigger & feedback
     const fileUploadArea = document.getElementById('file-upload');
     if (fileUploadArea) { // Check if the element exists (it's inside a tab)
         const fileInputElement = document.getElementById('recipe-image');
-        fileUploadArea.addEventListener('click', () => fileInputElement.click());
-        // Drag and Drop Handling
-        fileUploadArea.addEventListener('dragover', (event) => {
-            event.preventDefault(); // Necessary to allow drop
-            fileUploadArea.style.borderColor = 'var(--primary-color)';
-            fileUploadArea.style.backgroundColor = 'rgba(255, 123, 84, 0.05)';
-        });
-        fileUploadArea.addEventListener('dragleave', () => {
-             fileUploadArea.style.borderColor = 'var(--light-grey)';
-             fileUploadArea.style.backgroundColor = '#fafafa';
-        });
-        fileUploadArea.addEventListener('drop', (event) => {
-            event.preventDefault();
-            fileUploadArea.style.borderColor = 'var(--light-grey)';
-            fileUploadArea.style.backgroundColor = '#fafafa';
-            if (event.dataTransfer.files.length > 0) {
-                fileInputElement.files = event.dataTransfer.files; // Assign dropped files
-                handleFileChange(fileInputElement); // Update UI
-            }
-        });
-        fileInputElement.addEventListener('change', () => handleFileChange(fileInputElement));
+        if (fileInputElement) { // Also check if input exists
+            fileUploadArea.addEventListener('click', () => fileInputElement.click());
+
+            // Drag and Drop Handling
+            fileUploadArea.addEventListener('dragover', (event) => {
+                event.preventDefault(); // Necessary to allow drop
+                fileUploadArea.classList.add('dragging'); // Add class for styling
+            });
+            fileUploadArea.addEventListener('dragleave', () => {
+                 fileUploadArea.classList.remove('dragging'); // Remove class
+            });
+            fileUploadArea.addEventListener('drop', (event) => {
+                event.preventDefault();
+                fileUploadArea.classList.remove('dragging');
+                if (event.dataTransfer.files.length > 0) {
+                    fileInputElement.files = event.dataTransfer.files; // Assign dropped files
+                    handleFileChange(fileInputElement); // Update UI
+                }
+            });
+            fileInputElement.addEventListener('change', () => handleFileChange(fileInputElement));
+        }
     }
 
     // Recipe form submission listener
     const recipeForm = document.getElementById('recipe-form');
     if (recipeForm) {
         recipeForm.addEventListener('submit', handleFormSubmit);
+        // Note: The cancelEdit function adds/removes a cancel button dynamically
     }
 
     // Search functionality
@@ -1034,54 +1177,63 @@ document.addEventListener('DOMContentLoaded', function() {
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
             const recipeListContainer = document.getElementById('recipe-list');
+            if (!recipeListContainer) return; // Exit if list container not found
+
             let visibleCount = 0;
             let noResultMessage = recipeListContainer.querySelector('.no-search-results');
 
              // Remove existing no-results message before filtering
              if (noResultMessage) noResultMessage.remove();
 
-            currentRecipes.forEach(recipe => {
-                const card = recipeListContainer.querySelector(`.recipe-card[data-id='${recipe.id}']`);
-                if (!card) return;
+            // Ensure currentRecipes is populated before searching
+            if (currentRecipes && currentRecipes.length > 0) {
+                currentRecipes.forEach(recipe => {
+                    const card = recipeListContainer.querySelector(`.recipe-card[data-id='${recipe.id}']`);
+                    if (!card) return; // Skip if card not rendered yet
 
-                const title = recipe.name.toLowerCase();
-                const ingredientsText = (Array.isArray(recipe.ingredients) ? recipe.ingredients.join(', ') : '').toLowerCase();
-                const categoryText = recipe.category.toLowerCase();
-                const isMatch = title.includes(searchTerm) || ingredientsText.includes(searchTerm) || categoryText.includes(searchTerm);
+                    const title = recipe.name ? recipe.name.toLowerCase() : '';
+                    const ingredientsText = (Array.isArray(recipe.ingredients) ? recipe.ingredients.join(', ') : '').toLowerCase();
+                    const categoryText = recipe.category ? recipe.category.toLowerCase() : '';
+                    const isMatch = title.includes(searchTerm) || ingredientsText.includes(searchTerm) || categoryText.includes(searchTerm);
 
-                card.style.display = isMatch ? '' : 'none';
-                if (isMatch) visibleCount++;
-            });
+                    card.style.display = isMatch ? '' : 'none';
+                    if (isMatch) visibleCount++;
+                });
+            } else {
+                 // Handle case where recipes haven't loaded yet or there are none
+                 visibleCount = 0;
+            }
+
 
             // Add "no results" message if needed AFTER filtering
-            if (visibleCount === 0 && currentRecipes.length > 0) {
+            if (visibleCount === 0 && currentRecipes && currentRecipes.length > 0 && searchTerm) { // Only show if searching and recipes exist
                 noResultMessage = document.createElement('p');
                 noResultMessage.className = 'no-search-results';
                 noResultMessage.style.cssText = 'grid-column: 1 / -1; text-align: center; color: var(--grey); margin-top: 15px;';
                 noResultMessage.textContent = `No recipes found matching "${searchTerm}".`;
                 recipeListContainer.appendChild(noResultMessage);
-            } else if (visibleCount === 0 && currentRecipes.length === 0 && searchTerm === '') {
-                 // Handle case where list is empty initially and search is cleared
-                 if (!recipeListContainer.querySelector('p')) { // Avoid adding if initial empty message exists
+            } else if (visibleCount === 0 && (!currentRecipes || currentRecipes.length === 0) && !searchTerm) {
+                 // Handle case where list is empty initially and search is empty (or recipes haven't loaded)
+                 // Avoid adding message if loading message is present
+                 if (!recipeListContainer.querySelector('p:not(.no-search-results)')) {
                      recipeListContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--grey);">You haven\'t added any recipes yet. Use the "Add Recipe" tab!</p>';
                  }
             }
-        });
+        }); // End of search input listener
     }
 
     // Share recipe selection listener
     const shareRecipeSelect = document.getElementById('share-recipe');
     if (shareRecipeSelect) {
         shareRecipeSelect.addEventListener('change', function() {
-            displaySharePreview(this.value);
+            displaySharePreview(this.value); // Ensure displaySharePreview exists
         });
     }
 
     // Initial load of recipes (for the logged-in user)
     // Check if the recipe list container exists before loading
-    // This assumes script.js is loaded on pages where #recipe-list is present
     if (document.getElementById('recipe-list')) {
-        loadRecipes();
+        loadRecipes(); // This function updates currentRecipes and renders cards
     }
 
 }); // End DOMContentLoaded

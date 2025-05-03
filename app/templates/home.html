@@ -64,7 +64,8 @@
                          {% for log in recent_logs %}
                              <li class="list-group-item" style="font-size: 0.9rem; padding: 5px 0; border-bottom: 1px dashed #eee;">
                                  <i class="fas fa-check-circle" style="color: var(--success-color); margin-right: 5px;"></i>
-                                 Cooked <strong>{{ log.recipe_logged.name }}</strong> on {{ log.date_cooked.strftime('%b %d, %Y') }}
+                                 {# Ensure recipe_logged is loaded to prevent extra queries if using lazy='joined' is better #}
+                                 Cooked <strong>{{ log.recipe_logged.name if log.recipe_logged else 'Deleted Recipe' }}</strong> on {{ log.date_cooked.strftime('%b %d, %Y') }}
                                  {% if log.rating %}({{ log.rating }}<i class="fas fa-star" style="color:#ffc107; font-size:0.8em;"></i>){% endif %}
                                  {% if log.duration_seconds %} <span class="text-muted" style="font-size:0.85em;">({{ (log.duration_seconds / 60)|round(0, 'floor') }} min)</span>{% endif %}
                              </li>
@@ -152,38 +153,45 @@
              </div>
          </div>
 
-        <!-- Recipe Stats Tab (Keep as is, shows stats based on saved recipes) -->
-        <div id="recipe-stats" class="tab-content"> <!-- Changed ID -->
-             <div class="card">
-                 <h2><i class="fas fa-chart-pie"></i> My Recipe Statistics</h2> <!-- Changed Title -->
-                 <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">Statistics based on your saved recipes.</p>
-                 <div class="stats-grid">
-                    <!-- Stats Grid content remains the same -->
-                     <div class="stat-card">
-                         <div class="stat-label">Total Recipes</div>
-                         <div class="stat-value" id="total-recipes">0</div>
-                     </div>
-                     <div class="stat-card">
-                         <div class="stat-label">Most Common Category</div>
-                         <div class="stat-value" id="most-cooked">-</div>
-                     </div>
-                     <div class="stat-card">
-                         <div class="stat-label">Total Time</div>
-                         <div class="stat-value" id="total-time">0</div>
-                         <div class="stat-label">minutes (sum of recipe times)</div> <!-- Clarified label -->
-                     </div>
-                     <div class="stat-card">
-                         <div class="stat-label">Average Time</div>
-                         <div class="stat-value" id="avg-time">0</div>
-                         <div class="stat-label">minutes/recipe</div>
-                     </div>
-                </div>
-                <h3 style="margin-top: 30px;">Recipe Distribution by Category</h3>
-                <div class="chart-container"><canvas id="category-chart"></canvas></div>
-                <h3 style="margin-top: 30px;">Recipe Time Distribution</h3>
-                <div class="chart-container"><canvas id="time-chart"></canvas></div>
-             </div>
-         </div>
+         <!-- **** MODIFIED Recipe Stats Tab **** -->
+         <div id="recipe-stats" class="tab-content">
+              <div class="card">
+                  <!-- NEW TITLE -->
+                  <h2><i class="fas fa-chart-line"></i> My Cooking Statistics</h2>
+                  <!-- NEW DESCRIPTION -->
+                  <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">
+                      Statistics based on your logged cooking sessions.
+                  </p>
+                  <!-- NEW STATS GRID -->
+                  <div class="stats-grid" id="log-stats-display">
+                      <div class="stat-card">
+                          <div class="stat-label">Total Sessions Logged</div>
+                          <div class="stat-value" id="total-sessions">0</div>
+                      </div>
+                      <div class="stat-card">
+                          <div class="stat-label">Most Frequent Recipe</div>
+                          <div class="stat-value" id="most-frequent-recipe">-</div>
+                          <div class="stat-label" id="most-frequent-count"></div>
+                      </div>
+                      <div class="stat-card">
+                          <div class="stat-label">Total Time Logged</div>
+                          <div class="stat-value" id="total-time-logged">0h 0m</div>
+                          <div class="stat-label">(Sum of durations)</div>
+                      </div>
+                      <div class="stat-card">
+                          <div class="stat-label">Average Rating</div>
+                          <div class="stat-value" id="average-rating">N/A</div>
+                          <div class="stat-label">(1-5 stars)</div>
+                      </div>
+                  </div>
+                  <!-- NEW CHARTS -->
+                  <h3 style="margin-top: 30px;">Top 5 Most Logged Recipes</h3>
+                  <div class="chart-container"><canvas id="top-recipes-chart"></canvas></div>
+                  <h3 style="margin-top: 30px;">Monthly Cooking Frequency (Last 12 Months)</h3>
+                  <div class="chart-container"><canvas id="frequency-chart"></canvas></div>
+              </div>
+          </div>
+         <!-- **** END MODIFIED Recipe Stats Tab **** -->
 
         <!-- Share Tab (Keep as is) -->
         <div id="share" class="tab-content">
@@ -219,11 +227,15 @@
     </div>
     <!-- /.container -->
 
-    <!-- Pass user ID to JS if needed for filtering/actions -->
+    <!-- Pass user ID AND log stats data to JS -->
+    <!-- **** CORRECTED SCRIPT BLOCK **** -->
     <script>
         const CURRENT_USER_ID = {{ current_user.id | tojson }};
-        // IS_LOGGED_IN is implicitly true on this page due to @login_required
+        // Directly assign the JS object created by Jinja's tojson filter
+        // Requires passing the log_stats *dictionary* from the backend route
+        const LOG_STATS_DATA = {{ log_stats | tojson | safe }};
     </script>
+    <!-- **** END CORRECTED SCRIPT BLOCK **** -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 
 </body>
