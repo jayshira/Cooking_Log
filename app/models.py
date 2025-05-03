@@ -1,9 +1,9 @@
 # app/models.py
 import json
+from werkzeug.security import generate_password_hash, check_password_hash
 from . import db
 from flask_login import UserMixin
-from . import bcrypt
-from datetime import date, datetime, timedelta # Import date/time modules
+from datetime import date, datetime, timedelta
 
 # --- Existing Recipe Model (Keep as is, just add relationship) ---
 class Recipe(db.Model):
@@ -64,27 +64,28 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    # Password hash column remains the same, Werkzeug hashes are typically longer though
+    # Consider increasing length if needed in future, e.g., String(256)
     password_hash = db.Column(db.String(128), nullable=False)
 
-    # Relationship to Recipe (one-to-many) - Keep as is
+    # Relationships (Remain the same)
     recipes = db.relationship('Recipe', backref='author', lazy=True)
-
-    # --- Additions for Cooking Log ---
-    # Relationship to CookingLog (one-to-many: User has many logs)
-    # 'cook' is the attribute to access the User from a CookingLog instance
-    # 'backref='logs'' adds a 'logs' attribute to the User object to get their logs
     cooking_logs = db.relationship('CookingLog', backref='cook', lazy=True)
 
-    # Fields for cooking streak
+    # Streak Fields (Remain the same)
     last_cooked_date = db.Column(db.Date, nullable=True)
     current_streak = db.Column(db.Integer, default=0, nullable=False)
-    # --- End Additions ---
 
     def set_password(self, password):
-        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        """Hashes the password using Werkzeug and stores it."""
+        # generate_password_hash automatically handles salting
+        # Default method is generally good (pbkdf2:sha256)
+        self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return bcrypt.check_password_hash(self.password_hash, password)
+        """Checks the provided password against the stored Werkzeug hash."""
+        return check_password_hash(self.password_hash, password)
+    # --- End Modified Password Methods ---
 
     def __repr__(self):
         return f"<User {self.username}>"
