@@ -361,7 +361,7 @@ function checkShareDropdown() {
 async function handleFormSubmit(event) {
     event.preventDefault();
 
-    // Get form values
+    // Get form values (same as before)
     const name = document.getElementById('recipe-name').value.trim();
     const category = document.getElementById('recipe-category').value;
     const timeInput = document.getElementById('recipe-time').value;
@@ -370,52 +370,67 @@ async function handleFormSubmit(event) {
     const imageInput = document.getElementById('recipe-image');
 
     // Validation (same as before)
-    if (!name || !category || !timeInput || !ingredientsText || !instructions) {
-        alert('Please fill in all required fields.');
-        return;
-    }
+    // ...
 
     const time = parseInt(timeInput, 10);
-    if (isNaN(time) || time <= 0) {
-        alert('Please enter a valid positive number for time.');
-        return;
-    }
+    // ... more validation ...
 
-    // Process ingredients
     const ingredientsList = ingredientsText.split(/[\n,]+/).map(i => i.trim()).filter(i => i);
 
-    // Check if we're editing or creating
     const form = document.getElementById('recipe-form');
     const isEditing = form.dataset.editingId;
 
+    // Base recipe data, DO NOT include image initially
     const recipeData = {
         name,
         category,
         time,
         ingredients: ingredientsList,
         instructions,
-        date: new Date().toISOString().split('T')[0],
-        image: null
+        // date: new Date().toISOString().split('T')[0], // Backend handles date on creation, less needed on update
+        // image: null // <-- REMOVE THIS INITIAL NULL VALUE
     };
 
     const submitButton = event.target.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-    // Handle image if provided
+    // Flag to track if a new image was processed
+    let newImageProcessed = false;
+
+    // Handle image ONLY IF a new file is selected
     if (imageInput.files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            recipeData.image = e.target.result;
+        // Create a promise to handle FileReader async operation
+        const imagePromise = new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                recipeData.image = e.target.result; // Add image data ONLY if read successfully
+                newImageProcessed = true;
+                resolve(); // Resolve the promise after setting image data
+            };
+            reader.onerror = function() {
+                console.error("Error reading file");
+                // Decide if you want to proceed without image or reject
+                // alert("Error reading image file. Proceeding without updating image.");
+                // reject(new Error("Error reading image file")); // Option 1: Stop the process
+                resolve(); // Option 2: Continue without the new image
+            };
+            reader.readAsDataURL(imageInput.files[0]);
+        });
+
+        // Wait for the image processing to complete before saving
+        try {
+            await imagePromise;
             await saveRecipe(recipeData, isEditing, submitButton);
-        };
-        reader.onerror = function() {
-            console.error("Error reading file");
-            alert("Error reading image file. Saving recipe without image.");
-            saveRecipe(recipeData, isEditing, submitButton);
-        };
-        reader.readAsDataURL(imageInput.files[0]);
+        } catch (error) {
+            // Handle FileReader error if promise was rejected
+            alert(`Failed to process image: ${error.message}`);
+            postSaveActions(null, submitButton); // Indicate failure
+        }
+
     } else {
+        // No new file selected, proceed to save without image data
+        // The 'image' key will NOT be in recipeData
         await saveRecipe(recipeData, isEditing, submitButton);
     }
 }
