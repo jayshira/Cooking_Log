@@ -139,3 +139,39 @@ Follow these steps to set up the project locally:
     we havent written test files...
 
 
+## Project Structure
+
+```text
+KitchenLog/
+├── app/
+│   ├── static/
+│   │   ├── script.js
+│   │   └── style.css
+│   ├── templates/
+│   │   ├── auth/
+│   │   │   ├── login.html
+│   │   │   └── signup.html
+│   │   ├── cooking_session.html
+│   │   ├── home.html
+│   │   ├── index.html
+│   │   └── view_recipe.html
+│   ├── __init__.py         # Application Factory and Extension Initialization
+│   ├── auth.py             # Authentication routes and logic (auth Blueprint)
+│   ├── forms.py            # WTForms definitions (Signup, Login)
+│   ├── models.py           # SQLAlchemy Database Models (User, Recipe, CookingLog, SharedRecipe)
+│   └── routes.py           # Main application routes and API endpoints (main Blueprint)
+├── migrations/             # Database migration scripts (Flask-Migrate/Alembic)
+│   ├── versions/           # Individual migration files
+│   │   └── 825e35092fb6_...py # Example migration script
+│   ├── README              # Alembic README
+│   ├── alembic.ini         # Alembic configuration
+│   ├── env.py              # Alembic environment script
+│   └── script.py.mako      # Alembic script template
+├── env/                    # Python virtual environment directory (Not tracked by Git)
+├── config.py               # Configuration settings (SECRET_KEY, DATABASE_URI)
+├── recipes.db              # SQLite database file (Not tracked by Git)
+├── requirements.txt        # Python package dependencies
+├── run.py                  # Script to run the Flask development server
+├── .gitignore              # Specifies intentionally untracked files for Git
+├── LICENSE                 # Project License file
+└── README.md               # Project documentation

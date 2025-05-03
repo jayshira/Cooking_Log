@@ -1,6 +1,4 @@
-#gitignore
-.gitignore
-
+# --- Python ---
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -23,9 +21,12 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # PyInstaller
 *.manifest
@@ -47,50 +48,55 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+.pytest_cache/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# Environments
-.env
-.venv
-env/
+# --- Flask/Project Specific ---
+# Virtual Environment (Matches your 'env' directory)
+/env/
 venv/
-ENV/
-env.bak/
-venv.bak/
+.venv/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# Local Database file(s)
+/recipes.db
+instance/recipes.db # Add if you ever use an instance folder for the db
 
-# Rope project settings
-.ropeproject
+# Flask-Migrate/Alembic temp (if any, though usually not needed)
 
-# VS Code
-.vscode/
+# Project specific log/temp files (if any)
+*.log
+*.tmp
+
+# Analysis file provided
+/structure.txt
+
+# Instance folder (often contains sensitive config or DB)
+/instance/
+
+# --- OS / Editor Specific ---
+# Environment variables (common practice)
+.env
+.env.*
+!*.env.example # Keep example env files
 
 # macOS
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
 
 # Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
-# IDEs
+# Linux
+*~
+
+# IDE - VSCode
+.vscode/
+
+# IDE - PyCharm
 .idea/
-*.sublime-workspace
-*.sublime-project
 
-# Logs
-*.log
-
-# Recipes specific
-*.sqlite3
-*.db
-media/
-staticfiles/
+# Other temporary files
+*.swp
