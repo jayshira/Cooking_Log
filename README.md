@@ -18,12 +18,12 @@ The application follows a Multi-Page Application (MPA) architecture, where Flask
 
 ## Team Members
 
-| UWA ID   | Name            | GitHub Username                                     |
-| :------- | :-------------- | :-------------------------------------------------- |
-| 23868133 | Alison Barboza  | [BiliBiliMay](https://github.com/BiliBiliMay)       |
-| 24078797 | Jason Yulfan    | [jayshira](https://github.com/jayshira)             |
-| 22965587 | Jiwon Song      | [BlossomXD1](https://github.com/BlossomXD1)         |
-| 23769653 | Hunter Wang     | *(Pending Confirmation)*                            |
+| UWA ID   | Name            | GitHub Username                                    
+| :------- | :-------------- | :---------------------------------------------
+| 23868133 | Alison Barboza  | [BlossomXD1](https://github.com/BlossomXD1)     
+| 24078797 | Jason Yulfan    | [jayshira](https://github.com/jayshira)            
+| 22965587 | Jiwon Song      | [jiwon-07](https://github.com/jiwon-07)         
+| 23769653 | Hunter Wang     | [BiliBiliMay](https://github.com/BiliBiliMay)  
 
 *(Note: Please update Hunter Wang's GitHub username when confirmed.)*
 
