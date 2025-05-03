@@ -1,6 +1,8 @@
+# This file is used to install the required packages for the Flask application.
 Flask
 Flask-SQLAlchemy
 Flask-Login
 Flask-Bcrypt
 Flask-WTF
+Flask-Migrate
 email-validator
