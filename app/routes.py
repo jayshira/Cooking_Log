@@ -1,8 +1,11 @@
 # app/routes.py
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for # Added flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
-from .models import Recipe, User, CookingLog, db # Import CookingLog and db
-from datetime import date, datetime, timedelta # Import date/time
+from .models import Recipe, User, CookingLog, db
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+PERTH_TZ = ZoneInfo("Australia/Perth")
 
 main = Blueprint('main', __name__)
 
@@ -77,43 +80,64 @@ def log_cooking_session(recipe_id):
         duration_str = request.form.get('duration_seconds')
         rating_str = request.form.get('rating')
         notes = request.form.get('notes')
-        date_cooked_str = request.form.get('date_cooked', date.today().isoformat())
+        # Ensure date_cooked is parsed correctly
+        date_cooked_str = request.form.get('date_cooked')
+        if not date_cooked_str:
+             flash('Date cooked is required.', 'danger')
+             # Redirect back to the cooking session page
+             return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
+        try:
+            date_cooked = date.fromisoformat(date_cooked_str)
+        except ValueError:
+            flash('Invalid date format provided.', 'danger')
+            return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
 
-        # Validate and convert data
+
+        # Validate and convert other data
         duration_seconds = int(duration_str) if duration_str and duration_str.isdigit() else None # Allow Null duration
         rating = int(rating_str) if rating_str and rating_str.isdigit() else None # Allow Null rating
-        date_cooked = date.fromisoformat(date_cooked_str)
 
-        # --- Cooking Streak Logic ---
+
+        # --- Refined Cooking Streak Logic ---
         user = User.query.get(current_user.id) # Get fresh user object to update
-        today = date.today() # The actual current date
 
-        # Determine if streak should change based on the *date_cooked* from the form
+        # Get the current date in Perth timezone
+        today_perth = datetime.now(PERTH_TZ).date()
+
         last_known_cook_date = user.last_cooked_date
 
+        # 1. Check if the streak is broken based on the CURRENT DATE
         if last_known_cook_date:
-            days_difference = (date_cooked - last_known_cook_date).days
-            if days_difference == 1:
-                # Cooked on the day immediately following the last logged cook day
+            days_since_last_cook = (today_perth - last_known_cook_date).days
+            # If it's been more than 1 day since the last cook date relative to today, break the streak
+            if days_since_last_cook > 1:
+                user.current_streak = 0 # Reset streak to zero
+
+        # 2. Now, process the impact of the NEWLY LOGGED date_cooked
+        if last_known_cook_date:
+            # Calculate difference between the date being logged and the last known cook date
+            days_difference_from_log = (date_cooked - last_known_cook_date).days
+
+            if days_difference_from_log == 1:
+                # Cooked consecutively: Increment streak (even if it was just reset to 0)
                 user.current_streak += 1
-            elif days_difference > 1:
-                 # Gap in cooking, reset streak to 1 (assumes this log is the start of a new streak)
+            elif days_difference_from_log > 1:
+                 # Logged a date with a gap after the previous log. Start a new streak.
                  user.current_streak = 1
-            elif days_difference == 0:
-                 # Cooked again on the same day, streak doesn't change
-                 pass
-            else: # days_difference < 0
-                 # Logged a past date, doesn't increase streak, might break an existing one if logged between streak days (complex case - ignore for now)
-                 # For simplicity, we don't retroactively break streaks here.
+            # else: days_difference_from_log <= 0
+                 # Logged same day or a past date.
+                 # If logged same day (0), streak doesn't change.
+                 # If logged a past date (<0), it doesn't increment the streak based on this log.
+                 # The check against 'today_perth' already handled potential break.
                  pass
         else:
-             # First time cooking ever logged for this user
+             # This is the very first log for the user.
              user.current_streak = 1
 
-        # Update last cooked date *if* this log's date is the latest recorded cook date for the user
+        # 3. Update last_cooked_date *only if* the newly logged date is the latest one known
         if user.last_cooked_date is None or date_cooked > user.last_cooked_date:
              user.last_cooked_date = date_cooked
-        # --- End Streak Logic ---
+        # --- End Refined Streak Logic ---
 
         # Create the log entry
         new_log = CookingLog(
@@ -121,12 +145,12 @@ def log_cooking_session(recipe_id):
             recipe_id=recipe.id,
             date_cooked=date_cooked,
             duration_seconds=duration_seconds,
-            rating=rating,
-            notes=notes
+            rating=rating, # Now correctly passed
+            notes=notes      # Now correctly passed
         )
 
         db.session.add(new_log)
-        # Need to add the user object to the session if its attributes were changed
+        # Add the user object to the session because its streak/last_date might have changed
         db.session.add(user)
         db.session.commit() # Commit log and user streak updates together
 
@@ -136,10 +160,12 @@ def log_cooking_session(recipe_id):
     except Exception as e:
         db.session.rollback() # Rollback in case of error
         print(f"ERROR logging cooking session: {e}") # Log for debugging
-        flash(f'Error logging cooking session. Please check your input.', 'danger')
+        # Consider more specific error logging
+        # import traceback
+        # traceback.print_exc()
+        flash(f'An error occurred while logging the cooking session. Please check your input or contact support.', 'danger')
         # Redirect back to the cooking session page to allow correction
         return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
-
 
 # --- API Routes (Keep existing ones) ---
 @main.route('/api/recipes', methods=['GET'])
