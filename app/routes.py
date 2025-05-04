@@ -480,4 +480,40 @@ def add_to_whitelist(recipe_id):
 
     return jsonify({"message": f"Recipe: {recipe.name} shared with {name}; http://127.0.0.1:5000/view_recipe/{recipe.id}"}), 200
 
+@main.route("/recipes/clonerecipe", methods=["POST"])
+@login_required
+def clone_recipe():
+    """Clones a recipe and returns the new recipe ID."""
+    data = request.get_json()
+    recipe_id = data.get("recipe_id")
+    
+    if not recipe_id:
+        return jsonify({"error": "Recipe ID missing"}), 400
+
+    recipe = Recipe.query.get_or_404(recipe_id)
+    
+    # Check if the current user is whitelisted or owns the recipe
+    if recipe.user_id != current_user.id and current_user.id not in recipe.whitelist:
+        return jsonify({"error": "Unauthorized to clone this recipe"}), 403
+    
+    # Clone the recipe
+    new_recipe = Recipe(
+        name=f"{recipe.author.username}'s {recipe.name}",
+        category=recipe.category,
+        time=recipe.time,
+        ingredients=recipe.ingredients,
+        instructions=recipe.instructions,
+        date=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+        image=recipe.image,
+        user_id=current_user.id
+    )
+
+    db.session.add(new_recipe)
+    db.session.commit()
+    
+    return jsonify({
+        "message": f"Recipe '{recipe.name}' cloned successfully!",
+        "new_recipe_id": new_recipe.id
+    }), 201
+
 # --- End of File ---
