@@ -182,28 +182,60 @@
             stopBtn.addEventListener('click', stopTimer);
             resetBtn.addEventListener('click', resetTimer);
 
+            /* COMMENTED OUT BECAUSE NEW POPUP FEATURE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) -jason */
             // Optional: Prevent form submission if timer is running? Ask user first.
+            // logForm.addEventListener('submit', (event) => {
+            //     if (running) {
+            //         // Ask for confirmation if timer is still running
+            //         if (!confirm("The timer is still running. Do you want to stop it and log the session now?")) {
+            //             event.preventDefault(); // Prevent standard form submission
+            //         } else {
+            //             stopTimer(); // Stop timer and allow submission to proceed
+            //             // Duration input is already updated by stopTimer()
+            //         }
+            //     }
+            //     // Ensure duration is set if timer was started and stopped manually before submit
+            //     // This check ensures the latest elapsedSeconds is captured even if stop wasn't the last action
+            //     if (!running && startTime) {
+            //          durationInput.value = elapsedSeconds;
+            //     }
+            //     // Let the standard form submission proceed otherwise
+            // });
+
             logForm.addEventListener('submit', (event) => {
-                if (running) {
-                    // Ask for confirmation if timer is still running
-                    if (!confirm("The timer is still running. Do you want to stop it and log the session now?")) {
-                        event.preventDefault(); // Prevent standard form submission
-                    } else {
-                        stopTimer(); // Stop timer and allow submission to proceed
-                        // Duration input is already updated by stopTimer()
-                    }
-                }
-                // Ensure duration is set if timer was started and stopped manually before submit
-                // This check ensures the latest elapsedSeconds is captured even if stop wasn't the last action
-                if (!running && startTime) {
-                     durationInput.value = elapsedSeconds;
-                }
-                // Let the standard form submission proceed otherwise
+                event.preventDefault(); // Prevent form submission
+                document.getElementById('confirm-modal').style.display = 'flex';
             });
+        
+
+            // Add event listeners for modal buttons
+            document.getElementById('confirm-yes').addEventListener('click', () => {
+                document.getElementById('confirm-modal').style.display = 'none';
+                if (running) {
+                    stopTimer(); // Stop the timer if running
+                }
+                logForm.submit(); // Submit the form
+            });
+
+            document.getElementById('confirm-no').addEventListener('click', () => {
+                document.getElementById('confirm-modal').style.display = 'none';
+                // Timer continues running in the background no action
+            });
+
         });
 
-        // NO AJAX SUBMISSION BLOCK NEEDED HERE ANYMORE
-
     </script>
+
+    <!-- AJAX based popup instead so timer doesn't stop -->
+    <div id="confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 5px; text-align: center; max-width: 400px;">
+            <h3>Confirm Session Log</h3>
+            <p>Cooking will be logged. Confirm save?</p>
+            <div style="margin-top: 20px;">
+                <button id="confirm-no" class="btn btn-danger">No, Keep Cooking</button>
+                <button id="confirm-yes" class="btn btn-secondary">Yes, Log Now</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

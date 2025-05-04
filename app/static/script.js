@@ -1309,4 +1309,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // MISCELLANEOUS STUFF  
+    document.getElementById('recipe-time').addEventListener('keypress', function(e) {
+        // Allow only numbers and prevent other characters
+        if (!/\d/.test(String.fromCharCode(e.charCode))) {
+            e.preventDefault();
+        }
+    });
+
 }); // End DOMContentLoaded
