@@ -1236,4 +1236,77 @@ document.addEventListener('DOMContentLoaded', function() {
         loadRecipes(); // This function updates currentRecipes and renders cards
     }
 
+    // share recipe user search listeners
+    const input = document.getElementById("user-search");
+    const suggestions = document.getElementById("suggestions");
+    let debounce;
+
+    input.addEventListener("input", () => {
+    const q = input.value.trim();
+    clearTimeout(debounce);
+    if (q.length < 2) {
+        suggestions.innerHTML = "";
+        return;
+    }
+    debounce = setTimeout(() => {
+        fetch(`/users/search?q=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(usernames => {
+            suggestions.innerHTML = "";
+            usernames.forEach(username => {
+            const li = document.createElement("li");
+            // display the string itself
+            li.textContent = username;
+            li.addEventListener("click", () => {
+                // fill the input with that string
+                input.value = username;
+                suggestions.innerHTML = "";
+            });
+            suggestions.appendChild(li);
+            });
+        })
+        .catch(console.error);
+    }, 300);
+    });
+
+    document.addEventListener("click", e => {
+    if (!input.contains(e.target)) {
+        suggestions.innerHTML = "";
+    }
+    });
+
+    const whitelist_button = document.getElementById("add-to-whitelist-btn");
+    whitelist_button.addEventListener("click", () => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const recipe_id = document.getElementById('share-recipe').value;
+
+        if (!input.value) {
+            alert("Please select a user first.");
+            return;
+        }
+        console.log(input.value);
+        
+        fetch(`/recipes/${recipe_id}/whitelist`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify({ username: input.value.trim() })
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Get the message from the response
+            const message = data.message;
+            
+            // Display the message to the user
+            document.getElementById('response-message').textContent = message;
+            input.value = "";
+        })
+        .catch(err => {
+            console.error("Error adding to whitelist:", err);
+            alert("Error: Failed to add user to whitelist.");
+        });
+    });
+
 }); // End DOMContentLoaded

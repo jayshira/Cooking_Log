@@ -140,7 +140,9 @@ def view_recipe(recipe_id):
     try:
         recipe = Recipe.query.get_or_404(recipe_id)
         # Verify that the recipe belongs to the current user
-        if recipe.user_id != current_user.id:
+        if current_user.id in recipe.whitelist:
+            pass # User is whitelisted, allow access
+        elif recipe.user_id != current_user.id:
             flash('You can only view your own recipes.', 'warning')
             return redirect(url_for('main.home'))
         # Pass the recipe object to the template
@@ -404,5 +406,78 @@ def update_recipe(recipe_id):
         # import traceback; traceback.print_exc() # For debug
         return jsonify({"error": "Failed to update recipe"}), 500
 
+@main.route('/users/search')
+def user_search():
+    # Grab the `q` query‑parameter; default to '' if it's missing
+    q = request.args.get('q', '').strip()
+    
+    # If the search term is shorter than 2 characters, return an empty list
+    # (avoids hammering the DB for very short queries)
+    if len(q) < 2:
+        return jsonify([])
+
+    # Build a SQLAlchemy query:
+    #  - .filter(...) applies a WHERE clause
+    #  - User.name.ilike(...) does a case‑insensitive LIKE '%q%'
+    #  - .order_by(User.name) sorts results alphabetically
+    #  - .limit(10) caps the number of rows to 10
+    # 3. Build a query that SELECTs ONLY the username column:
+    #    - db.session.query(User.username) creates a Query for that single column
+    #    - .filter(...) applies a case‑insensitive substring match
+    #    - .order_by(User.username) sorts alphabetically
+    #    - .limit(10) caps results
+    #    - .scalars() tells SQLAlchemy “I want the scalar values (strings), not 1‑tuples”
+    #    - .all() executes and returns a List[str]
+    raw_matches = (
+        db.session
+          .query(User)
+          .with_entities(User.username)
+          .filter(User.username.ilike(f"%{q}%"))
+          .filter(User.id != current_user.id)
+          .order_by(User.username)
+          .limit(3)
+          .all()
+    )
+
+    # 4. Flatten the list of 1‑tuples into a list of strings:
+    usernames = [username for (username,) in raw_matches]
+
+    # jsonify(...) serializes the Python list/dict into a JSON response,
+    # and sets the proper Content-Type header.
+    return jsonify(usernames)
+
+@main.route("/recipes/<int:recipe_id>/whitelist", methods=["POST"])
+@login_required
+def add_to_whitelist(recipe_id):
+    data = request.get_json()
+    name = str(data.get("username"))
+
+    if not name:
+        return jsonify({"error": "Username missing"}), 400
+
+    user = db.session.query(User).filter_by(username=name).first()
+    if user.id is None:
+        return jsonify({"error": "User not found"}), 400
+
+    user_id = user.id
+    recipe = Recipe.query.get_or_404(recipe_id)
+
+    if recipe.user_id != current_user.id:
+        return jsonify({"error": "Unauthorized to share this recipe"}), 403
+    
+    if recipe.whitelist is None:
+        recipe.whitelist = []
+
+    # Ensure that user_id is converted to an integer
+    if not isinstance(user_id, int):
+        return jsonify({"error": "Invalid user ID type"}), 400
+
+    if user_id in recipe.whitelist:
+        return jsonify({"message": "User already in whitelist"}), 200
+
+    recipe.whitelist = recipe.whitelist + [user_id]
+    db.session.commit()
+
+    return jsonify({"message": f"Recipe: {recipe.name} shared with {name}; http://127.0.0.1:5000/view_recipe/{recipe.id}"}), 200
 
 # --- End of File ---

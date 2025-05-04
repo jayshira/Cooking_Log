@@ -22,6 +22,9 @@ class Recipe(db.Model):
     # 'backref='logs'' adds a 'logs' attribute to the Recipe object to get its logs
     cooking_logs = db.relationship('CookingLog', backref='recipe_logged', lazy=True)
 
+    # Added whitelisted user_id to the Recipe model
+    whitelist = db.Column(db.JSON, default=list)
+
     @property
     def ingredients(self):
         try:
