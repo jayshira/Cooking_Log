@@ -4,36 +4,48 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Welcome - KitchenLog</title>
-  <!-- Link to existing stylesheet -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <header>
+  <header class="main-header">
     <div class="container">
-      <h1>🍳 KitchenLog</h1>
-      <p class="subtitle">Log, save, and share your favorite recipes with friends!</p>
-      <nav class="user-auth-nav" style="margin-top:15px; text-align:center;">
-        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right:5px; background-color:var(--accent-color);">Log In</a>
-        <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color:var(--accent-color);">Sign Up</a>
+      <h1 class="logo">🍳 KitchenLog</h1>
+      <p class="subtitle">Your all-in-one recipe companion – log, track, and analyze your cooking journey!</p>
+      <nav class="auth-buttons">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Log In</a>
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-primary">Sign Up</a>
       </nav>
     </div>
   </header>
 
-  <div class="container">
-    <section class="card">
-      <h2>About KitchenLog</h2>
-      <p>KitchenLog is your personal recipe journal, helping you keep track of all your culinary creations. Save recipes, organize them by category, and share them with friends with just a few clicks.</p>
-
-      <h3>Key Features</h3>
-      <ul>
-        <li>📚 Log unlimited recipes</li>
-        <li>🔍 Search and filter by ingredients or category</li>
-        <li>📊 View your cooking stats</li>
-        <li>🤝 Share recipes on social media or via email</li>
-      </ul>
-
-      <p>Ready to get started? <a href="{{ url_for('auth.signup') }}">Create an account</a> or <a href="{{ url_for('auth.login') }}">Log in</a> now!</p>
+  <main class="container">
+    <section class="intro-section card">
+      <h2>What is KitchenLog?</h2>
+      <p>KitchenLog is more than a recipe book – it's your smart kitchen assistant. Save all your delicious creations and gain insights into your cooking habits!</p>
     </section>
-  </div>
+
+    <section class="features-section card">
+      <h3>✨ Key Features</h3>
+      <ul>
+        <li>📚 <strong>Recipe Logging:</strong> Save unlimited recipes with ingredients, steps, and notes.</li>
+        <li>🔍 <strong>Smart Search:</strong> Find recipes by ingredients, category, or tags.</li>
+        <li>📊 <strong>Cooking Statistics:</strong> Track your cooking frequency, most-used ingredients, and favorite categories.</li>
+        <li>🤝 <strong>Easy Sharing:</strong> Share your recipes with friends or post on social media.</li>
+      </ul>
+    </section>
+
+    <section class="cta-section card" style="text-align:center;">
+      <h3>Join KitchenLog today</h3>
+      <p>Start building your recipe collection and watch your culinary journey grow!</p>
+      <a href="{{ url_for('auth.signup') }}" class="btn btn-accent">Create an Account</a>
+      <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" style="margin-left:10px;">Log In</a>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container" style="text-align:center; padding: 20px 0;">
+      <p>&copy; 2025 KitchenLog Team. Built with ❤️ for home chefs.</p>
+    </div>
+  </footer>
 </body>
 </html>
