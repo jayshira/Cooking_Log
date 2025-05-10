@@ -14,10 +14,6 @@
             padding: 20px; 
         }
         
-        .recipe-details-header {
-            margin-bottom: 20px;
-        }
-        
         .recipe-details-card {
             background-color: var(--white);
             border-radius: 8px;
@@ -26,11 +22,24 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
         
-        h1, h2 {
+        .recipe-details-container h1 { /* More specific selector for page title */
             color: var(--primary-color);
             border-bottom: 2px solid var(--light-color);
             padding-bottom: 10px;
             margin-bottom: 20px;
+            font-size: 2rem; /* Adjust as needed */
+        }
+
+        .recipe-details-card h2 { /* For section titles within the card */
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--light-color); /* Lighter border for sub-headings */
+            padding-bottom: 8px;
+            margin-top: 20px; /* Space above section titles */
+            margin-bottom: 15px;
+            font-size: 1.5rem; /* Adjust as needed */
+        }
+        .recipe-details-card h2:first-child {
+            margin-top: 0; /* No top margin for the very first h2 in the card */
         }
         
         pre {
@@ -43,7 +52,7 @@
             font-size: 0.95em;
             max-height: 400px;
             overflow-y: auto;
-            margin: 0;
+            margin: 0; /* Remove default pre margin */
         }
         
         .back-link {
@@ -52,15 +61,27 @@
         
         .recipe-image-container {
             width: 100%;
-            height: 300px;
+            height: 300px; /* Adjust as needed */
             background-size: cover;
             background-position: center;
             border-radius: 8px;
             margin-bottom: 20px;
+            border: 1px solid #eee; /* Subtle border for the image */
+        }
+        
+        .recipe-info-block p {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .recipe-info-block p strong {
+            color: var(--dark-color);
         }
 
-        .button {
-            margin-bottom: 5px;
+        .actions-block .button, 
+        .actions-block .btn { /* Target both class names for consistency */
+            margin-bottom: 10px; /* Space between buttons */
+            display: block; /* Make buttons take full width of their container */
+            width: 100%;
         }
     </style>
 </head>
@@ -69,65 +90,90 @@
         <!-- Back navigation -->
         <div class="back-link">
             <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to Home
+                <i class="fas fa-arrow-left"></i> Back to My Kitchen
             </a>
         </div>
 
         <h1><i class="fas fa-book-open"></i> Recipe: {{ recipe.name }}</h1>
 
+        <!-- Flash messages area -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
 
-            <!-- Recipe Details Column -->
+            <!-- Main Recipe Content Column -->
             <div class="col-md-8" style="flex: 2; min-width: 300px;">
                 <div class="recipe-details-card">
                     <!-- Recipe Image -->
                     {% if recipe.image %}
-                    <div class="recipe-image-container" style="background-image: url('{{ recipe.image }}');"></div>
+                        <div class="recipe-image-container" style="background-image: url('{{ recipe.image }}');">
+                            <!-- Alt text is not applicable here as it's a background image -->
+                        </div>
+                    {% else %}
+                        <div class="recipe-image-container" style="background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; color: white; font-style: italic;">
+                            No image provided
+                        </div>
                     {% endif %}
                     
                     <h2><i class="fas fa-list-ul"></i> Ingredients</h2>
                     <div>
-                        {% if recipe.ingredients is iterable and recipe.ingredients is not string %}
-                            <ul style="padding-left: 20px;">
+                        {% if recipe.ingredients is iterable and recipe.ingredients is not string and recipe.ingredients %}
+                            <ul style="padding-left: 20px; list-style-type: disc;">
                                 {% for item in recipe.ingredients %}
                                     <li style="margin-bottom: 5px;">{{ item }}</li>
                                 {% endfor %}
                             </ul>
-                        {% else %}
+                        {% elif recipe.ingredients %} {# Handles case where it might be a string but not empty #}
                             <pre>{{ recipe.ingredients }}</pre>
+                        {% else %}
+                            <p><em>No ingredients listed.</em></p>
                         {% endif %}
                     </div>
 
                     <h2><i class="fas fa-shoe-prints"></i> Instructions</h2>
-                    <pre>{{ recipe.instructions }}</pre>
-                    
+                    {% if recipe.instructions %}
+                        <pre>{{ recipe.instructions }}</pre>
+                    {% else %}
+                        <p><em>No instructions provided.</em></p>
+                    {% endif %}
                 </div>
             </div>
 
-            <!-- Additional Recipe Info Column -->
+            <!-- Sidebar Column for Info and Actions -->
             <div class="col-md-4" style="flex: 1; min-width: 250px;">
                 <div class="recipe-details-card">
                     <h2><i class="fas fa-info-circle"></i> Recipe Info</h2>
-                    <div style="margin-bottom: 20px;">
-                        <p><strong>Author:</strong> {{ recipe.author.username }}</p>
+                    <div class="recipe-info-block">
+                        <p><strong>Author:</strong> {{ recipe.author.username if recipe.author else 'Unknown' }}</p>
                         <p><strong>Category:</strong> {{ recipe.category }}</p>
                         <p><strong>Time:</strong> {{ recipe.time }} minutes</p>
-                        <p><strong>Date Added:</strong> {{ recipe.date }}</p>
+                        <p><strong>Date Added:</strong> {{ recipe.date }}</p> <!-- Or format this date if it's a datetime object -->
                     </div>
                     
-                    <h2><i class="fas fa-clipboard-list"></i> Actions</h2>
-                    <div>
-                        {%if recipe.user_id == current_user.id %}
-                        <a href="{{ url_for('main.start_cooking_session', recipe_id=recipe.id) }}" class="btn btn-secondary btn-block mb-2 button">
-                            <i class="fas fa-utensils"></i> Start Cooking
-                        </a>
-                        <button class="btn btn-danger btn-block button">
-                            <i class="fas fa-trash"></i> Delete Recipe
-                        </button>
-                        {% else %}
-                        <a href="" class="btn btn-secondary btn-block mb-2 button" id="cloneButton">
-                            <i class="fas fa-utensils"></i> Add to My Kitchen
-                        </a>
+                    <h2 style="margin-top: 30px;"><i class="fas fa-cogs"></i> Actions</h2>
+                    <div class="actions-block">
+                        {# Use the is_owner variable passed from the route #}
+                        {% if is_owner %}
+                            <a href="{{ url_for('main.start_cooking_session', recipe_id=recipe.id) }}" class="btn btn-primary button">
+                                <i class="fas fa-utensils"></i> Start Cooking
+                            </a>
+                            <button id="deleteRecipeBtn" class="btn btn-danger button">
+                                <i class="fas fa-trash"></i> Delete This Recipe
+                            </button>
+                        {% else %} 
+                            {# User is not the owner. If they can view this page, they are whitelisted (or it's a public recipe in future). #}
+                            {# The clone button is for whitelisted users to add to their own collection. #}
+                            <a href="#" id="cloneButton" class="btn btn-success button">
+                                <i class="fas fa-clone"></i> Add to My Kitchen
+                            </a>
                         {% endif %}
                     </div>
                 </div>
@@ -136,66 +182,82 @@
     </div>
 
     <script>
-        // JavaScript to handle the delete button click and clone recipe
         document.addEventListener('DOMContentLoaded', function() {
-            // Delete recipe functionality
-            if ({{recipe.user_id}} == {{current_user.id}}) {
-                document.querySelector('.btn-danger').addEventListener('click', function() {
-                    if (confirm('Are you sure you want to delete this recipe?')) {
-                        // Redirect to the delete route
-                        fetch("/api/recipes/{{ recipe.id }}", {
+            const recipeId = {{ recipe.id | tojson }}; // Safely pass recipeId to JS
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            const deleteBtn = document.getElementById('deleteRecipeBtn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', function() {
+                    if (confirm('Are you sure you want to delete this recipe? This action cannot be undone and will remove all associated cooking logs.')) { // Added warning about logs
+                        fetch(`/api/recipes/${recipeId}`, {
                             method: "DELETE",
-                            headers: {
-                                "X-CSRFToken": document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                            headers: { 
+                                "X-CSRFToken": csrfToken,
+                                "Accept": "application/json" // Good practice
                             }
                         })
                         .then(response => {
                             if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
+                                // Try to parse error from JSON, otherwise use status text
+                                return response.json().then(errData => {
+                                    throw new Error(errData.error || response.statusText || `HTTP error! status: ${response.status}`);
+                                }).catch(() => { // Fallback if error response is not JSON
+                                    throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
+                                });
                             }
                             return response.json();
                         })
                         .then(data => {
-                            console.log("Success:", data);
+                            alert(data.message || "Recipe deleted successfully!");
                             window.location.href = "{{ url_for('main.home') }}";
                         })
                         .catch(error => {
-                            console.error("Error:", error);
-                            alert("Failed to delete recipe.");
+                            console.error("Error deleting recipe:", error);
+                            alert(`Failed to delete recipe: ${error.message}`);
                         });
                     }
                 });
             }
-            else {
-                // Clone recipe functionality
-                document.getElementById('cloneButton').addEventListener('click', function(e) {
-                    console.log("Clone button clicked");
-                    e.preventDefault();
-                    const recipeId = {{ recipe.id }};
-                    fetch("/recipes/clonerecipe", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRFToken": document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-                        },
-                        body: JSON.stringify({
-                            recipe_id: recipeId
+            
+            const cloneBtn = document.getElementById('cloneButton');
+            if (cloneBtn) {
+                cloneBtn.addEventListener('click', function(e) {
+                    e.preventDefault(); // Prevent default anchor action if any
+                    if (confirm('Add this recipe to your kitchen? A copy will be created that you own and can edit.')) {
+                        fetch("{{ url_for('main.clone_recipe') }}", { // Make sure this endpoint is correct
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": csrfToken,
+                                "Accept": "application/json"
+                            },
+                            body: JSON.stringify({ recipe_id: recipeId })
                         })
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        alert("Recipe successfully cloned to your kitchen!");
-                        window.location.href = "{{ url_for('main.home') }}";
-                    })
-                    .catch(error => {
-                        console.error("Error:", error);
-                        alert("Failed to clone recipe.");
-                    });
+                        .then(response => {
+                            if (!response.ok) {
+                                 return response.json().then(errData => {
+                                    throw new Error(errData.error || response.statusText || `HTTP error! status: ${response.status}`);
+                                }).catch(() => {
+                                    throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            alert(data.message || "Recipe successfully cloned to your kitchen!");
+                            // Redirect to the newly cloned recipe's view page or home page
+                            if (data.new_recipe_id) {
+                                window.location.href = "{{ url_for('main.view_recipe', recipe_id=0) }}".replace('/0', '/' + data.new_recipe_id);
+                            } else {
+                                window.location.href = "{{ url_for('main.home') }}";
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error cloning recipe:", error);
+                            alert(`Failed to clone recipe: ${error.message}`);
+                        });
+                    }
                 });
             }
         });

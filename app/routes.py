@@ -1,10 +1,10 @@
 # app/routes.py
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
-from .models import Recipe, User, CookingLog, db # Import models and db
-from datetime import date, datetime, timedelta
-from zoneinfo import ZoneInfo # Use zoneinfo for Python 3.9+
-from sqlalchemy import func, desc # <-- Make sure this line exists
+from .models import Recipe, User, CookingLog, db
+from datetime import date, datetime, timedelta, timezone # <--- MAKE SURE timezone IS IMPORTED HERE
+from zoneinfo import ZoneInfo 
+from sqlalchemy import func, desc
 
 # If using Python < 3.9, install pytz (pip install pytz) and use:
 # import pytz
@@ -28,7 +28,7 @@ def index():
 @login_required
 def home():
     user_id = current_user.id
-    user = User.query.get(user_id) # Get fresh user data
+    user = db.session.get(User, user_id)
 
     # --- Fetch Recent Logs and Streak (Existing) ---
     recent_logs = []
@@ -136,21 +136,27 @@ def home():
 @main.route('/view_recipe/<int:recipe_id>')
 @login_required
 def view_recipe(recipe_id):
-    """Displays the details page for a specific recipe."""
     try:
         recipe = Recipe.query.get_or_404(recipe_id)
-        # Verify that the recipe belongs to the current user
-        if current_user.id in recipe.whitelist:
-            pass # User is whitelisted, allow access
-        elif recipe.user_id != current_user.id:
-            flash('You can only view your own recipes.', 'warning')
+        
+        is_owner = (recipe.user_id == current_user.id)
+        
+        # Ensure recipe.whitelist is an iterable list for the 'in' check
+        current_recipe_whitelist = recipe.whitelist if isinstance(recipe.whitelist, list) else []
+        is_whitelisted = (current_user.id in current_recipe_whitelist)
+
+        # User must be the owner OR be whitelisted to view
+        if not is_owner and not is_whitelisted:
+            flash('You do not have permission to view this recipe.', 'warning')
             return redirect(url_for('main.home'))
-        # Pass the recipe object to the template
-        return render_template('view_recipe.html', recipe=recipe)
+            
+        # Pass 'is_owner' to the template. If not owner, and they are here, they are whitelisted.
+        return render_template('view_recipe.html', recipe=recipe, is_owner=is_owner)
     except Exception as e:
         print(f"Error fetching recipe page {recipe_id}: {e}")
         flash('Error displaying recipe details.', 'danger')
         return redirect(url_for('main.home'))
+
 
 # --- Route to start the cooking session page ---
 @main.route('/start_cooking/<int:recipe_id>')
@@ -200,7 +206,7 @@ def log_cooking_session(recipe_id):
         rating = int(rating_str) if rating_str and rating_str.isdigit() and 1 <= int(rating_str) <= 5 else None
 
         # --- Refined Cooking Streak Logic ---
-        user = User.query.get(current_user.id) # Get fresh user object
+        user = db.session.get(User, current_user.id) # Get fresh user object
 
         today_perth = datetime.now(PERTH_TZ).date()
         last_known_cook_date = user.last_cooked_date
@@ -295,7 +301,7 @@ def add_recipe():
             time=time_val,
             ingredients=data['ingredients'], # Uses the setter for list/string handling
             instructions=data['instructions'],
-            date=data.get('date', datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')), # Store creation timestamp maybe? Or just date. Using ISO format default from JS is fine too.
+            date=data.get('date', datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')), # Store creation timestamp maybe? Or just date. Using ISO format default from JS is fine too.
             image=data.get('image'), # Optional image
             user_id=current_user.id # Associate with the logged-in user
         )
@@ -450,70 +456,85 @@ def user_search():
 @login_required
 def add_to_whitelist(recipe_id):
     data = request.get_json()
-    name = str(data.get("username"))
+    username_to_whitelist = str(data.get("username", "")).strip()
 
-    if not name:
+    if not username_to_whitelist:
         return jsonify({"error": "Username missing"}), 400
 
-    user = db.session.query(User).filter_by(username=name).first()
-    if user.id is None:
-        return jsonify({"error": "User not found"}), 400
+    user_to_add = User.query.filter(User.username == username_to_whitelist).first()
 
-    user_id = user.id
+    if not user_to_add: # Corrected: Check if user_to_add is None
+        return jsonify({"error": f"User '{username_to_whitelist}' not found"}), 404
+
     recipe = Recipe.query.get_or_404(recipe_id)
 
     if recipe.user_id != current_user.id:
-        return jsonify({"error": "Unauthorized to share this recipe"}), 403
+        return jsonify({"error": "Unauthorized to manage whitelist for this recipe"}), 403
     
-    if recipe.whitelist is None:
-        recipe.whitelist = []
+    if user_to_add.id == current_user.id:
+        return jsonify({"message": "Owner already has full access and cannot be whitelisted."}), 200 # Or 400
 
-    # Ensure that user_id is converted to an integer
-    if not isinstance(user_id, int):
-        return jsonify({"error": "Invalid user ID type"}), 400
+    # Initialize recipe.whitelist if it's None or not a list (for older records)
+    # The model default=lambda: [] should handle new recipes.
+    current_recipe_whitelist = list(recipe.whitelist) if recipe.whitelist is not None else []
 
-    if user_id in recipe.whitelist:
-        return jsonify({"message": "User already in whitelist"}), 200
+    if user_to_add.id in current_recipe_whitelist:
+        return jsonify({"message": f"User '{user_to_add.username}' is already in the whitelist"}), 200
 
-    recipe.whitelist = recipe.whitelist + [user_id]
-    db.session.commit()
-
-    return jsonify({"message": f"Recipe: {recipe.name} shared with {name}; http://127.0.0.1:5000/view_recipe/{recipe.id}"}), 200
+    current_recipe_whitelist.append(user_to_add.id) # Add the integer ID
+    recipe.whitelist = current_recipe_whitelist # Re-assign to ensure SQLAlchemy detects change for JSON
+    
+    try:
+        db.session.commit()
+        shared_url = url_for('main.view_recipe', recipe_id=recipe.id, _external=True)
+        return jsonify({
+            "message": f"Recipe '{recipe.name}' shared with {user_to_add.username}. Link: {shared_url}"
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating whitelist for recipe {recipe.id}: {e}")
+        return jsonify({"error": "Failed to update whitelist due to a server error"}), 500
 
 @main.route("/recipes/clonerecipe", methods=["POST"])
 @login_required
 def clone_recipe():
-    """Clones a recipe and returns the new recipe ID."""
     data = request.get_json()
-    recipe_id = data.get("recipe_id")
+    recipe_id_to_clone = data.get("recipe_id")
     
-    if not recipe_id:
+    if not recipe_id_to_clone:
         return jsonify({"error": "Recipe ID missing"}), 400
 
-    recipe = Recipe.query.get_or_404(recipe_id)
+    original_recipe = db.session.get(Recipe, recipe_id_to_clone) 
     
-    # Check if the current user is whitelisted or owns the recipe
-    if recipe.user_id != current_user.id and current_user.id not in recipe.whitelist:
+    if not original_recipe:
+        return jsonify({"error": "Original recipe not found"}), 404
+    
+    current_recipe_whitelist = original_recipe.whitelist if isinstance(original_recipe.whitelist, list) else []
+    if original_recipe.user_id != current_user.id and current_user.id not in current_recipe_whitelist:
         return jsonify({"error": "Unauthorized to clone this recipe"}), 403
     
-    # Clone the recipe
     new_recipe = Recipe(
-        name=f"{recipe.author.username}'s {recipe.name}",
-        category=recipe.category,
-        time=recipe.time,
-        ingredients=recipe.ingredients,
-        instructions=recipe.instructions,
-        date=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
-        image=recipe.image,
-        user_id=current_user.id
+        name=f"{original_recipe.author.username}'s {original_recipe.name} (Clone)",
+        category=original_recipe.category,
+        time=original_recipe.time,
+        ingredients=original_recipe.ingredients, 
+        instructions=original_recipe.instructions,
+        date=datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
+        image=original_recipe.image, 
+        user_id=current_user.id,
+        whitelist=[] 
     )
 
-    db.session.add(new_recipe)
-    db.session.commit()
-    
-    return jsonify({
-        "message": f"Recipe '{recipe.name}' cloned successfully!",
-        "new_recipe_id": new_recipe.id
-    }), 201
+    try:
+        db.session.add(new_recipe)
+        db.session.commit()
+        return jsonify({
+            "message": f"Recipe '{original_recipe.name}' cloned successfully to your kitchen!",
+            "new_recipe_id": new_recipe.id 
+        }), 201 
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error cloning recipe {original_recipe.id}: {e}")
+        return jsonify({"error": "Failed to clone recipe due to a server error"}), 500
 
 # --- End of File ---

@@ -6,12 +6,14 @@
   <title>Welcome - KitchenLog</title>
   <!-- Link to existing stylesheet -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Optional: Link to Font Awesome if you use icons here -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
   <header>
     <div class="container">
       <h1>🍳 KitchenLog</h1>
-      <p class="subtitle">Log, save, and share your favorite recipes with friends!</p>
+      <p class="subtitle">Your personal digital cookbook and cooking diary. Log, save, analyze, and share your favorite recipes!</p>
       <nav class="user-auth-nav" style="margin-top:15px; text-align:center;">
         <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right:5px; background-color:var(--accent-color);">Log In</a>
         <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color:var(--accent-color);">Sign Up</a>
@@ -19,21 +21,74 @@
     </div>
   </header>
 
-  <div class="container">
-    <section class="card">
-      <h2>About KitchenLog</h2>
-      <p>KitchenLog is your personal recipe journal, helping you keep track of all your culinary creations. Save recipes, organize them by category, and share them with friends with just a few clicks.</p>
+  <div class="container" style="padding-top: 20px; padding-bottom: 20px;">
 
-      <h3>Key Features</h3>
-      <ul>
-        <li>📚 Log unlimited recipes</li>
-        <li>🔍 Search and filter by ingredients or category</li>
-        <li>📊 View your cooking stats</li>
-        <li>🤝 Share recipes on social media or via email</li>
-      </ul>
+    <!-- Flash Messages Display Block -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages" style="margin-bottom: 20px;">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              {{ message }}
+              {# Optional: Add a close button for alerts if your CSS supports it
+                 <button type="button" class="close-alert" onclick="this.parentElement.style.display='none';">×</button> 
+              #}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <!-- End Flash Messages Display Block -->
 
-      <p>Ready to get started? <a href="{{ url_for('auth.signup') }}">Create an account</a> or <a href="{{ url_for('auth.login') }}">Log in</a> now!</p>
+    <section class="card" style="text-align: center; margin-bottom: 30px;">
+      <h2>Welcome to KitchenLog!</h2>
+      <p style="font-size: 1.1rem; color: var(--grey); margin-bottom: 25px;">
+        The ultimate companion for home chefs and culinary enthusiasts. <br>
+        Easily manage your recipes, track your cooking sessions, discover new insights about your habits, and share your creations.
+      </p>
+      <div style="margin-top: 20px;">
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-primary" style="margin-right: 10px; padding: 12px 25px; font-size: 1.1rem;">Get Started - Sign Up</a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" style="padding: 12px 25px; font-size: 1.1rem;">Already a Member? Log In</a>
+      </div>
     </section>
-  </div>
+
+    <section class="features-overview" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; margin-bottom: 30px;">
+        <div class="feature-card card" style="flex: 1; min-width: 280px; text-align: center;">
+            <i class="fas fa-book-open fa-3x" style="color: var(--primary-color); margin-bottom: 15px;"></i>
+            <h3>Organize Recipes</h3>
+            <p>Store all your favorite recipes in one place, complete with ingredients, detailed instructions, and images.</p>
+        </div>
+        <div class="feature-card card" style="flex: 1; min-width: 280px; text-align: center;">
+            <i class="fas fa-utensils fa-3x" style="color: var(--primary-color); margin-bottom: 15px;"></i>
+            <h3>Track Cooking</h3>
+            <p>Log your cooking sessions, maintain a cooking streak, rate your meals, and add personal notes.</p>
+        </div>
+        <div class="feature-card card" style="flex: 1; min-width: 280px; text-align: center;">
+            <i class="fas fa-chart-line fa-3x" style="color: var(--primary-color); margin-bottom: 15px;"></i>
+            <h3>Gain Insights</h3>
+            <p>Analyze your cooking habits with statistics on frequency, favorite recipes, and more.</p>
+        </div>
+        <div class="feature-card card" style="flex: 1; min-width: 280px; text-align: center;">
+            <i class="fas fa-share-alt fa-3x" style="color: var(--primary-color); margin-bottom: 15px;"></i>
+            <h3>Share & Discover</h3>
+            <p>Share your culinary masterpieces with friends or clone recipes shared with you to try them yourself.</p>
+        </div>
+    </section>
+
+  </div> <!-- /.container -->
+
+  <footer style="text-align: center; padding: 20px 0; background-color: #f0f0f0; border-top: 1px solid #eee; margin-top: 40px;">
+    <div class="container">
+      <p>© {{ current_year }} KitchenLog Team. Happy Cooking!</p>
+      {# You can pass current_year from your route or use Jinja's now() if configured #}
+      {# For simplicity, you can hardcode the year or use a Jinja filter if you add one #}
+      {# Example using a context processor for current_year:
+         In app/__init__.py:
+         @app.context_processor
+         def utility_processor():
+            return dict(current_year=datetime.now().year)
+      #}
+    </div>
+  </footer>
 </body>
 </html>

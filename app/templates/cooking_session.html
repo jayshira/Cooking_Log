@@ -3,65 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Use recipe name in title -->
     <title>Cooking: {{ recipe.name }} - KitchenLog</title>
-    <!-- Link to your existing CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <!-- Link to Font Awesome CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- CSRF Token for potential future AJAX needs, though not used for this form now -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}"> {# Good to have for JS, even if form is standard post #}
     <style>
-        /* Add specific styles for this page if needed */
+        /* Specific styles for this page - kept from your version */
         .cooking-container { max-width: 1000px; margin: 20px auto; padding: 20px; }
         .recipe-details, .log-section { background-color: var(--white); border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        h1, h2 { color: var(--primary-color); border-bottom: 2px solid var(--light-color); padding-bottom: 10px; margin-bottom: 20px; }
-        pre { background-color: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee; white-space: pre-wrap; word-wrap: break-word; font-size: 0.95em; max-height: 400px; overflow-y: auto; }
+        
+        /* Consistent h1/h2 styling as in view_recipe.html */
+        .cooking-container h1 { 
+            color: var(--primary-color); 
+            border-bottom: 2px solid var(--light-color); 
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+            font-size: 2rem;
+        }
+        .log-section h2, .recipe-details h2 { 
+            color: var(--primary-color); 
+            border-bottom: 1px solid var(--light-color); 
+            padding-bottom: 8px; 
+            margin-top: 20px;
+            margin-bottom: 15px; 
+            font-size: 1.5rem;
+        }
+        .log-section h2:first-child, .recipe-details h2:first-child {
+             margin-top: 0;
+        }
+
+        pre { background-color: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee; white-space: pre-wrap; word-wrap: break-word; font-size: 0.95em; max-height: 400px; overflow-y: auto; margin:0; }
         #timer-display { font-size: 2.5rem; font-weight: bold; color: var(--dark-color); display: block; margin-bottom: 15px; text-align: center; background-color: #f0f0f0; padding: 10px; border-radius: 5px;}
-        .timer-controls button { margin-right: 10px; }
+        .timer-controls button { margin-right: 10px; margin-bottom: 5px; }
         .log-form .form-group { margin-bottom: 15px; }
         .rating-stars label { cursor: pointer; font-size: 1.8rem; color: #ccc; transition: color 0.2s; }
         .rating-stars input[type="radio"] { display: none; }
         .rating-stars input[type="radio"]:checked ~ label { color: #ffc107; } /* Following siblings */
         .rating-stars label:hover,
         .rating-stars label:hover ~ label { color: #ffca2c; } /* Hover effect */
-        .rating-stars { display: inline-block; direction: rtl; } /* Right-to-left for star selection */
-        .rating-stars label { float: right; } /* Float right within the RTL container */
+        .rating-stars { display: inline-block; direction: rtl; } 
+        .rating-stars label { float: right; } 
+
+        /* Modal Styles (from your previous version) */
+        #confirm-modal {
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            z-index: 1000; 
+            justify-content: center; 
+            align-items: center;
+        }
+        #confirm-modal > div { /* Inner modal box */
+            background: white; 
+            padding: 25px 30px; 
+            border-radius: 8px; 
+            text-align: center; 
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        #confirm-modal h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            border-bottom: none; /* No border for modal title */
+            font-size: 1.4rem;
+        }
+        #confirm-modal p {
+            margin-bottom: 20px;
+            font-size: 1rem;
+            color: var(--grey);
+        }
+        #confirm-modal .modal-actions button {
+            margin: 0 5px;
+        }
 
     </style>
 </head>
 <body>
     <div class="cooking-container">
-        <!-- Link back to Home/My Kitchen -->
         <div style="margin-bottom: 20px;">
-             <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to Home</a>
+             <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to My Kitchen</a>
         </div>
+
+        <!-- FLASH MESSAGES BLOCK -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                            {# Optional: <button type="button" class="close-alert" onclick="this.parentElement.style.display='none';">×</button> #}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <!-- END FLASH MESSAGES BLOCK -->
 
         <h1><i class="fas fa-utensils"></i> Cooking: {{ recipe.name }}</h1>
 
         <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
 
-            <!-- Recipe Details Column -->
             <div class="col-md-6" style="flex: 1; min-width: 300px;">
                 <div class="recipe-details">
                     <h2><i class="fas fa-list-ul"></i> Ingredients</h2>
-                    {# Use a loop for better formatting if ingredients is a list #}
-                    {% if recipe.ingredients is iterable and recipe.ingredients is not string %}
-                        <ul>
+                    {% if recipe.ingredients is iterable and recipe.ingredients is not string and recipe.ingredients %}
+                        <ul style="padding-left: 20px; list-style-type: disc;">
                             {% for item in recipe.ingredients %}
-                                <li>{{ item }}</li>
+                                <li style="margin-bottom: 5px;">{{ item }}</li>
                             {% endfor %}
                         </ul>
+                    {% elif recipe.ingredients %}
+                        <pre>{{ recipe.ingredients }}</pre>
                     {% else %}
-                        <pre>{{ recipe.ingredients }}</pre> {# Fallback for string #}
+                         <p><em>No ingredients listed.</em></p>
                     {% endif %}
 
                     <h2><i class="fas fa-shoe-prints"></i> Instructions</h2>
-                    <pre>{{ recipe.instructions }}</pre>
+                    {% if recipe.instructions %}
+                        <pre>{{ recipe.instructions }}</pre>
+                    {% else %}
+                        <p><em>No instructions provided.</em></p>
+                    {% endif %}
                 </div>
             </div>
 
-            <!-- Timer and Logging Column -->
             <div class="col-md-6" style="flex: 1; min-width: 300px;">
                 <div class="log-section">
                     <h2><i class="fas fa-stopwatch"></i> Session Timer</h2>
@@ -74,15 +142,8 @@
                     <hr style="margin: 25px 0;">
 
                     <h2><i class="fas fa-clipboard-list"></i> Log Your Session</h2>
-                    <!-- Standard HTML Form Submission -->
                     <form id="log-form" class="log-form" action="{{ url_for('main.log_cooking_session', recipe_id=recipe.id) }}" method="POST">
-                        <!-- CSRF token handled by Flask-WTF via form.hidden_tag() if using WTForms, -->
-                        <!-- otherwise needs manual inclusion if WTF protection is active on the route -->
-                        <!-- Since this form isn't generated by a WTForm object, we might need CSRF token manually if session protection is strict -->
-                        <!-- Let's assume Flask-WTF protects globally; add hidden input: -->
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-                        <!-- Hidden field to store timer duration -->
                         <input type="hidden" id="duration_seconds" name="duration_seconds" value="0">
 
                         <div class="form-group">
@@ -93,7 +154,6 @@
                         <div class="form-group">
                             <label for="rating" class="form-label"><i class="fas fa-star"></i> Rating (Optional)</label>
                             <div class="rating-stars">
-                                <!-- Use radio buttons for star rating -->
                                 <input type="radio" id="star5" name="rating" value="5" /><label for="star5" title="5 stars">★</label>
                                 <input type="radio" id="star4" name="rating" value="4" /><label for="star4" title="4 stars">★</label>
                                 <input type="radio" id="star3" name="rating" value="3" /><label for="star3" title="3 stars">★</label>
@@ -104,7 +164,7 @@
 
                         <div class="form-group">
                             <label for="notes" class="form-label"><i class="fas fa-pencil-alt"></i> Session Notes (Optional)</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="e.g., Substituted chicken for tofu, turned out great! Needed extra 5 mins bake time."></textarea>
+                            <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="e.g., Substituted chicken for tofu..."></textarea>
                         </div>
 
                         <button type="submit" id="log-session-btn" class="btn btn-success w-100"><i class="fas fa-check"></i> Finish & Log Session</button>
@@ -114,7 +174,18 @@
         </div>
     </div>
 
-    <!-- JavaScript for Timer Logic -->
+    <!-- Confirmation Modal (from your previous version) -->
+    <div id="confirm-modal">
+        <div> {# Inner modal box #}
+            <h3>Confirm Session Log</h3>
+            <p>Are you sure you want to log this cooking session now?</p>
+            <div class="modal-actions">
+                <button id="confirm-no" class="btn btn-secondary">No, Keep Cooking</button>
+                <button id="confirm-yes" class="btn btn-success">Yes, Log Now</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const timerDisplay = document.getElementById('timer-display');
@@ -122,7 +193,11 @@
             const stopBtn = document.getElementById('stop-timer-btn');
             const resetBtn = document.getElementById('reset-timer-btn');
             const durationInput = document.getElementById('duration_seconds');
-            const logForm = document.getElementById('log-form'); // Reference to the form
+            const logForm = document.getElementById('log-form');
+            
+            const confirmModal = document.getElementById('confirm-modal');
+            const confirmYesBtn = document.getElementById('confirm-yes');
+            const confirmNoBtn = document.getElementById('confirm-no');
 
             let timerInterval = null;
             let startTime = null;
@@ -143,16 +218,17 @@
                 const now = Date.now();
                 elapsedSeconds = Math.floor((now - startTime) / 1000);
                 timerDisplay.textContent = formatTime(elapsedSeconds);
+                durationInput.value = elapsedSeconds; // Continuously update hidden input
             }
 
             function startTimer() {
                 if (running) return;
                 running = true;
-                startTime = Date.now() - (elapsedSeconds * 1000); // Resume timer accurately
+                startTime = Date.now() - (elapsedSeconds * 1000); 
                 timerInterval = setInterval(updateTimer, 1000);
                 startBtn.disabled = true;
                 stopBtn.disabled = false;
-                resetBtn.disabled = true; // Disable reset while running
+                resetBtn.disabled = true; 
             }
 
             function stopTimer() {
@@ -160,82 +236,54 @@
                 running = false;
                 clearInterval(timerInterval);
                 timerInterval = null;
-                updateTimer(); // Final update
-                durationInput.value = elapsedSeconds; // Store duration in the hidden input
+                updateTimer(); // Final update to display and hidden input
                 startBtn.disabled = false;
                 stopBtn.disabled = true;
-                resetBtn.disabled = false; // Enable reset after stopping
+                resetBtn.disabled = false; 
             }
 
             function resetTimer() {
-                if (running) return; // Cannot reset while running
+                if (running) stopTimer(); // Stop if running before reset
                 elapsedSeconds = 0;
-                durationInput.value = 0; // Reset hidden input
+                startTime = null; // Reset start time
+                durationInput.value = 0; 
                 timerDisplay.textContent = formatTime(0);
-                resetBtn.disabled = true; // Disable reset after resetting
+                resetBtn.disabled = true; 
                 stopBtn.disabled = true;
                 startBtn.disabled = false;
             }
 
-            // Attach timer button listeners
             startBtn.addEventListener('click', startTimer);
             stopBtn.addEventListener('click', stopTimer);
             resetBtn.addEventListener('click', resetTimer);
 
-            /* COMMENTED OUT BECAUSE NEW POPUP FEATURE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) -jason */
-            // Optional: Prevent form submission if timer is running? Ask user first.
-            // logForm.addEventListener('submit', (event) => {
-            //     if (running) {
-            //         // Ask for confirmation if timer is still running
-            //         if (!confirm("The timer is still running. Do you want to stop it and log the session now?")) {
-            //             event.preventDefault(); // Prevent standard form submission
-            //         } else {
-            //             stopTimer(); // Stop timer and allow submission to proceed
-            //             // Duration input is already updated by stopTimer()
-            //         }
-            //     }
-            //     // Ensure duration is set if timer was started and stopped manually before submit
-            //     // This check ensures the latest elapsedSeconds is captured even if stop wasn't the last action
-            //     if (!running && startTime) {
-            //          durationInput.value = elapsedSeconds;
-            //     }
-            //     // Let the standard form submission proceed otherwise
-            // });
-
             logForm.addEventListener('submit', (event) => {
-                event.preventDefault(); // Prevent form submission
-                document.getElementById('confirm-modal').style.display = 'flex';
+                event.preventDefault(); // Always prevent default to show modal
+                if (running) {
+                    // If timer is running, modal will ask. Update duration just in case.
+                    durationInput.value = elapsedSeconds;
+                } else if (startTime) { // Timer was used but stopped
+                    durationInput.value = elapsedSeconds;
+                } else { // Timer was never started
+                    durationInput.value = 0; // Or set to null/empty depending on backend
+                }
+                confirmModal.style.display = 'flex';
             });
         
-
-            // Add event listeners for modal buttons
-            document.getElementById('confirm-yes').addEventListener('click', () => {
-                document.getElementById('confirm-modal').style.display = 'none';
+            confirmYesBtn.addEventListener('click', () => {
+                confirmModal.style.display = 'none';
                 if (running) {
-                    stopTimer(); // Stop the timer if running
+                    stopTimer(); // Stop the timer if it was running when modal was shown
                 }
+                // Duration input should already be up-to-date from stopTimer or the submit listener
                 logForm.submit(); // Submit the form
             });
 
-            document.getElementById('confirm-no').addEventListener('click', () => {
-                document.getElementById('confirm-modal').style.display = 'none';
-                // Timer continues running in the background no action
+            confirmNoBtn.addEventListener('click', () => {
+                confirmModal.style.display = 'none';
+                // User chose not to log yet, timer might still be running if it was.
             });
-
         });
-
     </script>
-
-    <!-- AJAX based popup instead so timer doesn't stop -->
-    <div id="confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 20px; border-radius: 5px; text-align: center; max-width: 400px;">
-            <h3>Confirm Session Log</h3>
-            <p>Cooking will be logged. Confirm save?</p>
-            <div style="margin-top: 20px;">
-                <button id="confirm-no" class="btn btn-danger">No, Keep Cooking</button>
-                <button id="confirm-yes" class="btn btn-secondary">Yes, Log Now</button>
-            </div>
-        </div>
-    </div>
 </body>
 </html>
