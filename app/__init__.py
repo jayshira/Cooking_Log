@@ -6,8 +6,6 @@ from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_migrate import Migrate
 from config import Config
-from dotenv import load_dotenv
-import os
 
 db = SQLAlchemy()
 login_manager = LoginManager()
