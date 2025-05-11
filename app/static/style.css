@@ -687,6 +687,24 @@ body > .custom-alert {
     border-radius: 4px;
     cursor: text; /* Indicate it can be selected */
 }
+.dropdown {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #ccc;
+    position: absolute;
+    background: white;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 200px;
+}
+.dropdown li {
+    padding: 8px;
+    cursor: pointer;
+}
+.dropdown li:hover {
+    background: #eee;
+}
 
 /* --- File Upload --- */
 .file-upload {
