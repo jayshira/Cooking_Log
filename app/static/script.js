@@ -1085,6 +1085,49 @@ function closeAlert() {
     }
 }
 
+// Shared Recipes Popup Helper Functions
+async function fetchSharedRecipes() {
+    try {
+        const response = await fetch('/api/shared_recipes/my');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching shared recipes:", error);
+        return [];
+    }
+}
+
+function displaySharedRecipes() {
+    const sharedRecipesList = document.getElementById('shared-recipes-list');
+    const noRecipesMessage = document.getElementById('no-recipes-message');
+
+    fetchSharedRecipes().then(shared_recipes => {
+        if (shared_recipes.length === 0) {
+            noRecipesMessage.style.display = 'block';
+            sharedRecipesList.style.display = 'none';
+        } else {
+            noRecipesMessage.style.display = 'none';
+            sharedRecipesList.style.display = 'block';
+            
+            sharedRecipesList.innerHTML = '';
+            shared_recipes.forEach(shared_recipe => {
+                const li = document.createElement('li');
+                li.textContent = `${shared_recipe.recipe_name} - Shared by ${shared_recipe.sharer_name} on ${shared_recipe.date_shared.split('T')[0]}`;
+                li.addEventListener('click', () => {
+                    window.open(`./view_recipe/${shared_recipe.recipe_id}`, '_blank');
+                    // Add your recipe viewing logic here
+                });
+                sharedRecipesList.appendChild(li);
+            });
+        }
+    }).catch(error => {
+        console.error('Error fetching shared recipes:', error);
+    });
+}
+
+
 // static/script.js
 
 // ... (Global variables and functions declared above this block) ...
@@ -1279,6 +1322,7 @@ document.addEventListener('DOMContentLoaded', function() {
     whitelist_button.addEventListener("click", () => {
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         const recipe_id = document.getElementById('share-recipe').value;
+        const username = input.value.trim();
 
         if (!input.value) {
             alert("Please select a user first.");
@@ -1292,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 "Content-Type": "application/json",
                 "X-CSRFToken": csrfToken
             },
-            body: JSON.stringify({ username: input.value.trim() })
+            body: JSON.stringify({ username: username })
         })
         .then(res => res.json())
         .then(data => {
@@ -1307,8 +1351,42 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error("Error adding to whitelist:", err);
             alert("Error: Failed to add user to whitelist.");
         });
+
+        fetch('/api/shared_recipes', {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify({
+                receiver_name: username,
+                recipe_id: recipe_id,
+            })
+        });
+
     });
 
+    // Mailbox popup initialization
+    const mailboxIcon = document.querySelector('.mailbox-icon');
+    const mailboxPopup = document.getElementById('mailbox-popup');
+    const closePopup = document.getElementById('close-popup');
+
+    mailboxIcon.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mailboxPopup.style.display = 'block';
+        displaySharedRecipes();
+    });
+
+    closePopup.addEventListener('click', function() {
+        mailboxPopup.style.display = 'none';
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!mailboxPopup.contains(e.target) && e.target !== mailboxIcon) {
+            mailboxPopup.style.display = 'none';
+        }
+    });
+    
     // MISCELLANEOUS STUFF  
     document.getElementById('recipe-time').addEventListener('keypress', function(e) {
         // Allow only numbers and prevent other characters

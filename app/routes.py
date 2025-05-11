@@ -1,7 +1,7 @@
 # app/routes.py
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
-from .models import Recipe, User, CookingLog, db
+from .models import Recipe, User, CookingLog, SharedRecipe, db
 from datetime import date, datetime, timedelta, timezone # <--- MAKE SURE timezone IS IMPORTED HERE
 from zoneinfo import ZoneInfo 
 from sqlalchemy import func, desc
@@ -411,6 +411,73 @@ def update_recipe(recipe_id):
         print(f"ERROR updating recipe {recipe_id}: {e}")
         # import traceback; traceback.print_exc() # For debug
         return jsonify({"error": "Failed to update recipe"}), 500
+    
+@main.route('/api/shared_recipes', methods=['POST'])
+@login_required
+def create_shared_recipe():
+    if not request.is_json:
+        return jsonify({"error": "Request must be JSON"}), 400
+
+    data = request.get_json()
+    required_fields = ['receiver_name', 'recipe_id']
+    if not all(field in data for field in required_fields):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    try:
+        sharer_name = User.query.get(current_user.id).username
+        receiver_name = str(data['receiver_name'])
+        recipe_id = int(data['recipe_id'])
+
+        user = User.query.filter_by(username=receiver_name).first()
+        print(user.id)
+        if not user:
+            return jsonify({"error": "Receiver not found"}), 404
+        else:
+            receiver_id = user.id
+
+        print(recipe_id)
+        if not Recipe.query.get(recipe_id):
+            return jsonify({"error": "Recipe not found"}), 404
+
+        existing_shared = SharedRecipe.query.filter_by(
+            receiver_id=receiver_id,
+            recipe_id=recipe_id,
+            sharer_name=sharer_name
+        ).first()
+
+        if existing_shared:
+            return jsonify({"error": "Recipe already shared with this user"}), 409
+
+        new_shared = SharedRecipe(
+            receiver_id=receiver_id,
+            recipe_id=recipe_id,
+            sharer_name=sharer_name
+        )
+        db.session.add(new_shared)
+        db.session.commit()
+
+    except ValueError:
+        return jsonify({"error": "Invalid ID format"}), 400
+    except Exception as e:
+        print(f"Error creating shared recipe: {e}")
+        db.session.rollback()
+        return jsonify({"error": "Failed to create shared recipe"}), 500
+    
+    return jsonify({
+        "message": f"Recipe {recipe_id} shared with {receiver_name} successfully."
+    }), 201
+
+@main.route('/api/shared_recipes/my', methods=['GET'])
+@login_required
+def get_my_shared_recipes():
+    try:
+        user_id = current_user.id
+        shared_recipes = SharedRecipe.query.filter_by(receiver_id=user_id).all()
+        return jsonify([recipe.to_dict() for recipe in shared_recipes]), 200
+    except Exception as e:
+        print(f"Error fetching shared recipes: {e}")
+        return jsonify({"error": "Failed to fetch shared recipes"}), 500
+
 
 @main.route('/users/search')
 def user_search():
