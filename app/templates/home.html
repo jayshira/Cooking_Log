@@ -87,6 +87,7 @@
             <!-- Changed Stats tab name -->
             <div class="tab" data-tab="recipe-stats">Recipe Stats</div>
             <div class="tab" data-tab="share">Share Recipe</div>
+            <div class="faketab mailbox-icon" id="mailbox-icon"><i class="fas fa-envelope"></i></div>
             <!-- Remove disabled tabs as this page requires login -->
         </div>
 
@@ -228,6 +229,18 @@
                     <ul id="suggestions" class="dropdown"></ul>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Mailbox Popup -->
+    <div id="mailbox-popup" class="mailbox-popup">
+        <div class="popup-header">
+            <h3>Shared Recipes</h3>
+            <button id="close-popup">&times;</button>
+        </div>
+        <div class="popup-content">
+            <p id="no-recipes-message">No shared recipes yet</p>
+            <ul id="shared-recipes-list"></ul>
         </div>
     </div>
     <!-- /.container -->

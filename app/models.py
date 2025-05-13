@@ -111,3 +111,21 @@ class CookingLog(db.Model):
     def __repr__(self):
         recipe_name = self.recipe_logged.name if self.recipe_logged else 'Unknown Recipe'
         return f"<CookingLog {self.id} for '{recipe_name}' by User {self.user_id} on {self.date_cooked}>"
+
+class SharedRecipe(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sharer_name = db.Column(db.String(80), nullable=False)
+    recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=False)
+    date_shared = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        recipe = Recipe.query.get(self.recipe_id)  # Corrected query
+        return {
+            'id': self.id,
+            'receiver_id': self.receiver_id,
+            'recipe_id': self.recipe_id,
+            'sharer_name': self.sharer_name,
+            'date_shared': self.date_shared.isoformat(),
+            'recipe_name': recipe.name if recipe else 'Unknown'
+        }
