@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - KitchenLog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>📝 {{ title }}</h1>
+            <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to Kitchen
+                    </a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <div class="filter-controls" style="margin-bottom: 20px;">
+                <div class="form-group">
+                    <label for="recipe-filter"><i class="fas fa-filter"></i> Filter by Recipe</label>
+                    <select id="recipe-filter" class="form-control">
+                        <option value="">All Recipes</option>
+                        {% for recipe in recipes %}
+                            <option value="{{ recipe.id }}">{{ recipe.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="logs-list">
+                {% if logs %}
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Recipe</th>
+                                <th>Duration</th>
+                                <th>Rating</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                                <tr data-recipe-id="{{ log.recipe_id }}">
+                                    <td>{{ log.date_cooked.strftime('%b %d, %Y') }}</td>
+                                    <td>
+                                        {% if log.recipe_logged %}
+                                            {{ log.recipe_logged.name }}
+                                        {% else %}
+                                            <em>Recipe deleted</em>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.duration_seconds %}
+                                            {{ (log.duration_seconds // 60) }} min
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.rating %}
+                                            {% for i in range(log.rating) %}★{% endfor %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.notes or '-' }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p style="text-align: center; color: var(--grey);">No cooking logs found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const recipeFilter = document.getElementById('recipe-filter');
+            
+            recipeFilter.addEventListener('change', function() {
+                const selectedRecipeId = this.value;
+                const allRows = document.querySelectorAll('.logs-table tbody tr');
+                
+                allRows.forEach(row => {
+                    if (!selectedRecipeId || row.dataset.recipeId === selectedRecipeId) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+
+    <style>
+        .logs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .logs-table th, .logs-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--light-grey);
+        }
+        
+        .logs-table th {
+            background-color: var(--bg-light);
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        .logs-table tr:hover {
+            background-color: rgba(255, 123, 84, 0.05);
+        }
+        
+        .filter-controls {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end;
+        }
+        
+        @media (max-width: 768px) {
+            .logs-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .filter-controls {
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+        }
+    </style>
+</body>
+</html>

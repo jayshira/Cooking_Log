@@ -245,8 +245,6 @@ function renderRecipeCard(recipe) {
         ? `background-image: url(${recipe.image});`
         : 'background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color));';
 
-    const isOwner = typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID;
-
     recipeCard.innerHTML = `
         <div class="recipe-img" style="${imageStyle}"></div>
         <div class="recipe-info">
@@ -259,12 +257,13 @@ function renderRecipeCard(recipe) {
                 <strong>Ingredients:</strong> ${ingredientsPreview || 'No ingredients listed'}
             </p>
             <div class="recipe-actions">
-                <!-- View Button (always visible maybe?) -->
+                <!-- View Button (always visible) -->
                 <a href="/view_recipe/${recipe.id}" class="btn btn-secondary btn-sm">
                     <i class="fas fa-eye"></i> View
                 </a>
 
-                ${isOwner ? `
+                <!-- Edit Button (only for owner) -->
+                ${typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID ? `
                 <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})">
                     <i class="fas fa-edit"></i> Edit
                 </button>

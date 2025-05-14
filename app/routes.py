@@ -18,12 +18,6 @@ main = Blueprint('main', __name__)
 # --- HTML Page Routes ---
 
 @main.route('/')
-def index():
-    # If user is logged in, maybe redirect to home? Optional.
-    # if current_user.is_authenticated:
-    #    return redirect(url_for('main.home'))
-    return render_template('index.html', title='Welcome')
-
 @main.route('/home')
 @login_required
 def home():
@@ -43,94 +37,13 @@ def home():
         flash("Error loading user data.", "warning")
 
     # --- Calculate Log-Based Statistics ---
-    log_stats = {
-        'total_sessions': 0,
-        'most_frequent_recipe': ('-', 0), # (name, count)
-        'total_time_logged_seconds': 0,
-        'average_rating': 0.0,
-        'top_recipes_data': [], # For chart 1: [{'name': 'Recipe A', 'count': 5}, ...]
-        'monthly_frequency_data': [] # For chart 2: [{'month': 'YYYY-MM', 'count': 3}, ...]
-    }
+    stats = calculate_user_stats(user_id)  # Call the external function here
 
-    try:
-        # Query all logs for the user
-        user_logs = CookingLog.query.filter_by(user_id=user_id).all()
-        log_stats['total_sessions'] = len(user_logs)
-
-        if user_logs:
-            # Calculate Total Time Logged (sum non-null durations)
-            total_duration = db.session.query(func.sum(CookingLog.duration_seconds))\
-                                      .filter(CookingLog.user_id == user_id, CookingLog.duration_seconds.isnot(None))\
-                                      .scalar()
-            log_stats['total_time_logged_seconds'] = total_duration or 0
-
-            # Calculate Average Rating (avg non-null ratings)
-            avg_rating = db.session.query(func.avg(CookingLog.rating))\
-                                  .filter(CookingLog.user_id == user_id, CookingLog.rating.isnot(None))\
-                                  .scalar()
-            log_stats['average_rating'] = float(avg_rating or 0.0) # Ensure float
-
-            # Find Most Frequent Recipe & Top 5 Recipes
-            top_recipes_query = db.session.query(
-                                        Recipe.name,
-                                        func.count(CookingLog.id).label('log_count')
-                                    ).join(CookingLog, Recipe.id == CookingLog.recipe_id)\
-                                    .filter(CookingLog.user_id == user_id)\
-                                    .group_by(Recipe.name)\
-                                    .order_by(desc('log_count'))\
-                                    .limit(5).all() # Get top 5
-
-            if top_recipes_query:
-                 log_stats['most_frequent_recipe'] = (top_recipes_query[0][0], top_recipes_query[0][1]) # First result is most frequent
-                 log_stats['top_recipes_data'] = [{'name': name, 'count': count} for name, count in top_recipes_query]
-
-            # Calculate Monthly Frequency (last 12 months including current)
-            today = date.today()
-            frequency_data = {} # Use dict for easy aggregation
-            # Go back 11 months + current month = 12 months total range
-            start_date = today - timedelta(days=365) # Approximate start for query efficiency
-
-            monthly_logs_query = db.session.query(
-                                        # Extract YYYY-MM format from date_cooked
-                                        # Note: SQLite date functions differ from PostgreSQL/MySQL
-                                        # Using substr for SQLite: substr(date_cooked, 1, 7)
-                                        # Adjust if using a different DB
-                                        func.strftime('%Y-%m', CookingLog.date_cooked).label('month'),
-                                        func.count(CookingLog.id).label('count')
-                                    ).filter(CookingLog.user_id == user_id,
-                                             CookingLog.date_cooked >= start_date)\
-                                    .group_by('month')\
-                                    .order_by('month').all()
-
-            # Initialize frequency counts for the last 12 months
-            month_counts = {}
-            for i in range(12):
-                # Calculate month offset correctly
-                year = today.year - (today.month - 1 - i < 0) # Year adjustment if month rolls back
-                month = (today.month - 1 - i) % 12 + 1 # Correct month calculation
-                month_str = f"{year:04d}-{month:02d}"
-                month_counts[month_str] = 0
-
-            # Populate counts from the query
-            for month_db, count in monthly_logs_query:
-                if month_db in month_counts: # Only include if within the last 12 months range
-                     month_counts[month_db] = count
-
-            # Convert to list format for chart, sorted by month
-            log_stats['monthly_frequency_data'] = [{'month': m, 'count': c} for m, c in sorted(month_counts.items())]
-
-
-    except Exception as e:
-        print(f"Error calculating log stats: {e}")
-        flash("Could not calculate cooking statistics.", "warning")
-
-
-    # Pass stats data (as JSON string for easy JS parsing) and other data to template
-    return render_template('home.html',
-                           current_user=current_user,
-                           recent_logs=recent_logs,
-                           current_streak=streak,
-                           log_stats=log_stats) # Pass the dictionary, not the JSON string
+    return render_template('home.html', 
+                         recent_logs=recent_logs, 
+                         streak=streak,
+                         stats=stats,
+                         log_stats=stats)  # Make sure to pass stats as log_stats if your template expects it
 
 # --- Route to view a specific recipe page ---
 @main.route('/view_recipe/<int:recipe_id>')
@@ -603,5 +516,103 @@ def clone_recipe():
         db.session.rollback()
         print(f"Error cloning recipe {original_recipe.id}: {e}")
         return jsonify({"error": "Failed to clone recipe due to a server error"}), 500
+
+@main.route('/logs')
+@login_required
+def view_logs():
+    user_id = current_user.id
+    
+    # Get all logs for the user
+    all_logs = CookingLog.query.filter_by(user_id=user_id)\
+                              .options(db.joinedload(CookingLog.recipe_logged))\
+                              .order_by(CookingLog.date_cooked.desc(), CookingLog.created_at.desc())\
+                              .all()
+    
+    # Get all recipes for the filter dropdown
+    user_recipes = Recipe.query.filter_by(user_id=user_id).order_by(Recipe.name).all()
+    
+    return render_template('logs.html', 
+                         logs=all_logs,
+                         recipes=user_recipes,
+                         title='My Cooking Logs')
+
+def calculate_user_stats(user_id):
+    """Calculate all statistics for a user's cooking logs."""
+    stats = {
+        'total_sessions': 0,
+        'most_frequent_recipe': {'name': '-', 'count': 0},
+        'total_time_logged_seconds': 0,
+        'total_time_logged_hours': 0.0,
+        'average_rating': 0.0,
+        'top_recipes_data': [],
+        'monthly_frequency_data': []
+    }
+
+    try:
+        # Total sessions
+        stats['total_sessions'] = CookingLog.query.filter_by(user_id=user_id).count()
+
+        # Total time logged
+        total_duration = db.session.query(func.sum(CookingLog.duration_seconds))\
+                                  .filter(CookingLog.user_id == user_id, 
+                                          CookingLog.duration_seconds.isnot(None))\
+                                  .scalar()
+        stats['total_time_logged_seconds'] = int(total_duration) if total_duration else 0
+        stats['total_time_logged_hours'] = round(stats['total_time_logged_seconds'] / 3600, 2)
+
+        # Average rating
+        avg_rating = db.session.query(func.avg(CookingLog.rating))\
+                              .filter(CookingLog.user_id == user_id, 
+                                      CookingLog.rating.isnot(None))\
+                              .scalar()
+        stats['average_rating'] = float(avg_rating) if avg_rating else 0.0
+
+        # Top 5 most logged recipes
+        top_recipes = db.session.query(
+                                Recipe.name,
+                                func.count(CookingLog.id).label('log_count')
+                            ).join(CookingLog, Recipe.id == CookingLog.recipe_id)\
+                            .filter(CookingLog.user_id == user_id)\
+                            .group_by(Recipe.name)\
+                            .order_by(desc('log_count'))\
+                            .limit(5).all()
+        
+        if top_recipes:
+            stats['most_frequent_recipe'] = {'name': top_recipes[0][0], 'count': int(top_recipes[0][1])}
+            stats['top_recipes_data'] = [{'name': name, 'count': int(count)} for name, count in top_recipes]
+
+        # Monthly frequency (last 12 months)
+        today = date.today()
+        month_counts = {}
+        
+        # Initialize with last 12 months
+        for i in range(12):
+            year = today.year - (today.month - 1 - i < 0)
+            month = (today.month - 1 - i) % 12 + 1
+            month_str = f"{year:04d}-{month:02d}"
+            month_counts[month_str] = 0
+
+        # Get actual counts from database
+        start_date = today - timedelta(days=365)
+        monthly_logs = db.session.query(
+                                func.strftime('%Y-%m', CookingLog.date_cooked).label('month'),
+                                func.count(CookingLog.id).label('count')
+                            ).filter(CookingLog.user_id == user_id,
+                                     CookingLog.date_cooked >= start_date)\
+                            .group_by('month')\
+                            .order_by('month').all()
+
+        # Update counts
+        for month_db, count in monthly_logs:
+            if month_db in month_counts:
+                month_counts[month_db] = int(count)
+
+        # Convert to list format
+        stats['monthly_frequency_data'] = [{'month': m, 'count': c} for m, c in sorted(month_counts.items())]
+
+    except Exception as e:
+        print(f"Error calculating stats: {e}")
+    
+    return stats
 
 # --- End of File ---

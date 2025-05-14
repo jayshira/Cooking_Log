@@ -158,7 +158,12 @@
          <div id="recipe-stats" class="tab-content">
               <div class="card">
                   <!-- NEW TITLE -->
-                  <h2><i class="fas fa-chart-line"></i> My Cooking Statistics</h2>
+                  <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-chart-line"></i> My Cooking Statistics</span>
+                    <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-list"></i> View Logs
+                    </a>
+                </h2>
                   <!-- NEW DESCRIPTION -->
                   <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">
                       Statistics based on your logged cooking sessions.
@@ -243,18 +248,21 @@
             <ul id="shared-recipes-list"></ul>
         </div>
     </div>
+
     <!-- /.container -->
 
     <!-- Pass user ID AND log stats data to JS -->
     <!-- **** CORRECTED SCRIPT BLOCK **** -->
-    <script>
-        const CURRENT_USER_ID = {{ current_user.id | tojson }};
-        // Directly assign the JS object created by Jinja's tojson filter
-        // Requires passing the log_stats *dictionary* from the backend route
-        const LOG_STATS_DATA = {{ log_stats | tojson | safe }};
-    </script>
-    <!-- **** END CORRECTED SCRIPT BLOCK **** -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+   <!-- Securely Pass User ID and Log Stats Data to JS -->
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function() {
+        const CURRENT_USER_ID = JSON.parse('{{ current_user.id | tojson | safe }}');
+        const LOG_STATS_DATA = JSON.parse('{{ log_stats | tojson | safe }}');
+        console.log("User ID:", CURRENT_USER_ID);
+        console.log("Log Stats:", LOG_STATS_DATA);
+    });
+</script>
 
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
