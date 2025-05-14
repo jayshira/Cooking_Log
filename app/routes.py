@@ -19,10 +19,11 @@ main = Blueprint('main', __name__)
 @main.route('/')
 @main.route('/index')
 def index():
-    return redirect(url_for('main.home'))  
+    # Changed to render index.html directly
+    return render_template('index.html')  
 
 
-@main.route('/')
+# Removed @main.route('/') from here to avoid conflict with the index route
 @main.route('/home')
 @login_required
 def home():

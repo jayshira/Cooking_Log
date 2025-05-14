@@ -738,10 +738,11 @@ function updateStats() {
 
     if (totalSessionsEl) totalSessionsEl.textContent = stats.total_sessions || 0;
 
-    if (mostFrequentRecipeEl) {
-        if (stats.most_frequent_recipe && stats.most_frequent_recipe[1] > 0) {
-            mostFrequentRecipeEl.textContent = stats.most_frequent_recipe[0]; // Name
-            if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe[1]} logs)`;
+        if (mostFrequentRecipeEl) {
+        // CORRECTED ACCESS:
+        if (stats.most_frequent_recipe && stats.most_frequent_recipe.name && stats.most_frequent_recipe.name !== '-' && stats.most_frequent_recipe.count > 0) {
+            mostFrequentRecipeEl.textContent = stats.most_frequent_recipe.name; // Access .name
+            if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe.count} logs)`; // Access .count
         } else {
             mostFrequentRecipeEl.textContent = '-';
             if (mostFrequentCountEl) mostFrequentCountEl.textContent = '';

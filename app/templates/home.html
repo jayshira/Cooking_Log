@@ -53,7 +53,8 @@
              <!-- Cooking Streak -->
              <div class="streak-display" style="text-align: center;">
                  <span style="font-size: 2.5rem; display:block; color: var(--primary-color);">🔥</span>
-                 <span style="font-weight: bold; font-size: 1.2rem;">{{ current_streak }}</span> Day Streak!
+                 <!-- MODIFIED HERE: Changed current_streak to streak -->
+                 <span style="font-weight: bold; font-size: 1.2rem;">{{ streak }}</span> Day Streak!
              </div>
 
              <!-- Recent Activity -->
@@ -241,7 +242,7 @@
     <div id="mailbox-popup" class="mailbox-popup">
         <div class="popup-header">
             <h3>Shared Recipes</h3>
-            <button id="close-popup">&times;</button>
+            <button id="close-popup">×</button>
         </div>
         <div class="popup-content">
             <p id="no-recipes-message">No shared recipes yet</p>
