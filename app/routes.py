@@ -1,10 +1,11 @@
 # app/routes.py
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
 from .models import Recipe, User, CookingLog, SharedRecipe, db
 from datetime import date, datetime, timedelta, timezone # <--- MAKE SURE timezone IS IMPORTED HERE
 from zoneinfo import ZoneInfo 
 from sqlalchemy import func, desc
+import base64 # For image encoding
 
 # If using Python < 3.9, install pytz (pip install pytz) and use:
 # import pytz
@@ -86,9 +87,15 @@ def view_recipe(recipe_id):
 @login_required
 def start_cooking_session(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    if recipe.user_id != current_user.id:
-         flash('You can only start cooking sessions for your own recipes.', 'warning')
-         return redirect(url_for('main.home'))
+    # Allow whitelisted users to start cooking shared recipes too, they log it for themselves
+    is_owner = (recipe.user_id == current_user.id)
+    current_recipe_whitelist = recipe.whitelist if isinstance(recipe.whitelist, list) else []
+    is_whitelisted = (current_user.id in current_recipe_whitelist)
+
+    if not is_owner and not is_whitelisted:
+         flash('You do not have permission to start a cooking session for this recipe.', 'warning')
+         return redirect(url_for('main.view_recipe', recipe_id=recipe.id)) # Or main.home
+
     today_iso = date.today().isoformat()
     return render_template('cooking_session.html', recipe=recipe, today_iso=today_iso)
 
@@ -96,9 +103,18 @@ def start_cooking_session(recipe_id):
 @main.route('/log_cooking/<int:recipe_id>', methods=['POST'])
 @login_required
 def log_cooking_session(recipe_id):
-    recipe = Recipe.query.get_or_404(recipe_id)
-    if recipe.user_id != current_user.id:
-         flash('You cannot log a session for a recipe you do not own.', 'error')
+    # User is logging this for themselves, regardless of original recipe owner
+    # The recipe_id links to the Recipe they cooked, current_user.id is the logger.
+    recipe = Recipe.query.get_or_404(recipe_id) 
+    
+    # Permission check: user must own OR be whitelisted to log for this recipe.
+    # This check is also in start_cooking_session, but good to have here too.
+    is_owner_of_original = (recipe.user_id == current_user.id)
+    current_recipe_whitelist = recipe.whitelist if isinstance(recipe.whitelist, list) else []
+    is_whitelisted_for_original = (current_user.id in current_recipe_whitelist)
+
+    if not is_owner_of_original and not is_whitelisted_for_original:
+         flash('You cannot log a session for a recipe you do not have access to.', 'error')
          return redirect(url_for('main.home'))
 
     try:
@@ -106,6 +122,26 @@ def log_cooking_session(recipe_id):
         rating_str = request.form.get('rating')
         notes = request.form.get('notes')
         date_cooked_str = request.form.get('date_cooked')
+        
+        log_image_url = None
+        image_file = request.files.get('log_image')
+        if image_file and image_file.filename != '':
+            if not image_file.mimetype.startswith('image/'):
+                flash('Invalid image file type. Please upload a valid image.', 'danger')
+                return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
+            try:
+                image_data = image_file.read()
+                # Basic size check (e.g., 5MB)
+                if len(image_data) > 5 * 1024 * 1024:
+                    flash('Image file is too large (max 5MB).', 'danger')
+                    return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
+
+                base64_image = base64.b64encode(image_data).decode('utf-8')
+                log_image_url = f"data:{image_file.mimetype};base64,{base64_image}"
+            except Exception as img_e:
+                print(f"Error processing log image: {img_e}")
+                flash('Could not process the uploaded image.', 'danger')
+                # Potentially allow logging without image or redirect
 
         if not date_cooked_str:
              flash('Date cooked is required.', 'danger')
@@ -165,7 +201,8 @@ def log_cooking_session(recipe_id):
 
         new_log = CookingLog(
             user_id=current_user.id, recipe_id=recipe.id, date_cooked=date_cooked,
-            duration_seconds=duration_seconds, rating=rating, notes=notes
+            duration_seconds=duration_seconds, rating=rating, notes=notes,
+            image_url=log_image_url # Save the image URL
         )
         db.session.add(new_log); db.session.add(user); db.session.commit()
         flash(f'Successfully logged your cooking session for "{recipe.name}"!', 'success')
@@ -193,6 +230,8 @@ def edit_log(log_id):
             duration_minutes_str = request.form.get('duration_minutes')
             rating_str = request.form.get('rating')
             notes = request.form.get('notes', '').strip()
+            remove_current_image = request.form.get('remove_current_image') == 'yes'
+            new_image_file = request.files.get('log_image_edit')
 
             if not date_cooked_str:
                 flash('Date cooked is required.', 'danger')
@@ -216,7 +255,7 @@ def edit_log(log_id):
                     return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
             
             new_rating = None
-            if rating_str and rating_str.strip(): # If a rating is submitted
+            if rating_str and rating_str.strip(): 
                 try:
                     rating_val = int(rating_str)
                     if 1 <= rating_val <= 5: new_rating = rating_val
@@ -226,26 +265,38 @@ def edit_log(log_id):
                 except ValueError:
                     flash('Invalid rating format.', 'danger')
                     return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
-            # If no rating_str is submitted (e.g., user cleared it), new_rating remains None
 
-            old_date_cooked = log_entry.date_cooked
+            # Handle image update/removal
+            if new_image_file and new_image_file.filename != '':
+                if not new_image_file.mimetype.startswith('image/'):
+                    flash('Invalid new image file type. Please upload a valid image.', 'danger')
+                    return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
+                try:
+                    image_data = new_image_file.read()
+                    if len(image_data) > 5 * 1024 * 1024: # 5MB limit
+                        flash('New image file is too large (max 5MB).', 'danger')
+                        return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
+                    base64_image = base64.b64encode(image_data).decode('utf-8')
+                    log_entry.image_url = f"data:{new_image_file.mimetype};base64,{base64_image}"
+                except Exception as img_e:
+                    print(f"Error processing new log image during edit: {img_e}")
+                    flash('Could not process the new uploaded image.', 'danger')
+            elif remove_current_image:
+                log_entry.image_url = None
+            # If neither, image_url remains unchanged.
 
             log_entry.date_cooked = new_date_cooked
             log_entry.duration_seconds = new_duration_seconds
             log_entry.rating = new_rating
             log_entry.notes = notes if notes else None 
 
-            db.session.commit() # Commit changes to the log entry first
+            db.session.commit() 
 
-            # --- Streak Recalculation after log edit ---
             user = db.session.get(User, current_user.id)
             if user.current_streak is None: user.current_streak = 0
-
-            # Fetch all unique log dates for the user, sorted
             all_user_log_dates = sorted(list(set(
                 [log.date_cooked for log in CookingLog.query.filter_by(user_id=user.id).all()]
             )))
-
             if not all_user_log_dates:
                 user.current_streak = 0
                 user.last_cooked_date = None
@@ -257,13 +308,10 @@ def edit_log(log_id):
                         days_diff_recalc = (all_user_log_dates[i] - all_user_log_dates[i-1]).days
                         if days_diff_recalc == 1:
                             recalculated_streak += 1
-                        elif days_diff_recalc > 1: # Gap in cooking
+                        elif days_diff_recalc > 1: 
                             recalculated_streak = 1 
-                        # If days_diff_recalc <= 0 (e.g. same day logs), streak based on this pair doesn't advance from prior value
-                
                 user.current_streak = recalculated_streak
                 user.last_cooked_date = all_user_log_dates[-1]
-
                 today_perth = datetime.now(PERTH_TZ).date()
                 if user.last_cooked_date:
                     days_since_last_actual_cook = (today_perth - user.last_cooked_date).days
@@ -271,17 +319,15 @@ def edit_log(log_id):
                         user.current_streak = 0
                 else:
                     user.current_streak = 0
-            
             if user.current_streak < 0: user.current_streak = 0
-            db.session.commit() # Commit changes to the user (streak/last_cooked_date)
+            db.session.commit()
 
             flash('Cooking log updated successfully!', 'success')
-            return redirect(url_for('main.view_logs'))
+            return redirect(url_for('main.view_log_detail', log_id=log_entry.id)) # Redirect to detail view
 
         except Exception as e:
             db.session.rollback()
             print(f"Error updating log (ID: {log_id}): {e}")
-            # import traceback; traceback.print_exc();
             flash(f'An error occurred while updating the log: {str(e)}', 'danger')
             return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
 
@@ -338,10 +384,14 @@ def delete_recipe_api(recipe_id):
         recipe = Recipe.query.get_or_404(recipe_id)
         if recipe.user_id != current_user.id:
              return jsonify({"error": "Unauthorized to delete this recipe"}), 403
-        # Prevent deletion if logs exist (handled by view_recipe.html JS for UI, but good to have backend check)
-        # For direct API calls, this is crucial.
         if CookingLog.query.filter_by(recipe_id=recipe.id).first():
-            return jsonify({"error": "Cannot delete recipe with existing cooking logs. Please delete logs first or this feature needs to be implemented."}), 409 # 409 Conflict
+            # Check if any of these logs are by the current user to be more specific
+            user_logs_for_recipe = CookingLog.query.filter_by(recipe_id=recipe.id, user_id=current_user.id).first()
+            if user_logs_for_recipe:
+                return jsonify({"error": "Cannot delete recipe. You have existing cooking logs for it. Please delete those logs first or contact support."}), 409 # 409 Conflict
+            # If logs exist but not for this user, deletion might be allowed, or a different message.
+            # For now, any log blocks deletion by owner.
+            return jsonify({"error": "Cannot delete recipe with existing cooking logs. Please delete logs first or this feature needs to be implemented."}), 409
 
         db.session.delete(recipe)
         db.session.commit()
@@ -376,11 +426,11 @@ def update_recipe(recipe_id):
                     recipe.time = time_val; updated = True
                 elif time_val <=0: print(f"Ignoring invalid time value: {time_val}")
             except (ValueError, TypeError): print(f"Ignoring non-integer time value: {data.get('time')}")
-        if 'ingredients' in data: # Always treat as update if key is present for JSON list
+        if 'ingredients' in data: 
              recipe.ingredients = data['ingredients']; updated = True
         if 'instructions' in data and data['instructions'] and recipe.instructions != data['instructions']:
             recipe.instructions = data['instructions']; updated = True
-        if 'image' in data: # Image can be set to null/empty string to remove it
+        if 'image' in data: 
             recipe.image = data['image']; updated = True
         if updated:
             db.session.commit()
@@ -408,73 +458,69 @@ def create_shared_recipe():
         recipe_to_share = Recipe.query.get(recipe_id)
         if not recipe_to_share: return jsonify({"error": "Recipe not found"}), 404
         
-        # Authorization: Ensure sharer owns the recipe
         if recipe_to_share.user_id != current_user.id:
             return jsonify({"error": "You can only share your own recipes."}), 403
 
-        existing_shared = SharedRecipe.query.filter_by(receiver_id=receiver_id, recipe_id=recipe_id).first() # Simpler check
+        existing_shared = SharedRecipe.query.filter_by(receiver_id=receiver_id, recipe_id=recipe_id).first() 
         if existing_shared: return jsonify({"error": "Recipe already shared with this user"}), 409
         
         new_shared = SharedRecipe(
             receiver_id=receiver_id,
             recipe_id=recipe_id,
             sharer_name=sharer_name,
-            recipe_name=recipe_to_share.name # Store recipe name for convenience
+            # recipe_name=recipe_to_share.name # Not needed, SharedRecipe doesn't have this field. Whitelist relies on Recipe name.
             )
         db.session.add(new_shared); db.session.commit()
     except ValueError: return jsonify({"error": "Invalid ID format"}), 400
     except Exception as e:
         print(f"Error creating shared recipe: {e}"); db.session.rollback()
         return jsonify({"error": "Failed to create shared recipe"}), 500
-    return jsonify({"message": f"Recipe {recipe_id} shared with {receiver_name} successfully."}), 201
+    return jsonify({"message": f"Recipe {recipe_to_share.name} shared with {receiver_name} successfully."}), 201
+
 
 @main.route('/api/shared_recipes/my', methods=['GET'])
 @login_required
 def get_my_shared_recipes():
     try:
         user_id = current_user.id
-        # Query shared recipes and join with Recipe table to get recipe details like name
         shared_recipes_data = db.session.query(
                 SharedRecipe.id,
                 SharedRecipe.recipe_id,
                 SharedRecipe.sharer_name,
                 SharedRecipe.date_shared,
-                Recipe.name.label('recipe_name')  # Get recipe name directly
+                Recipe.name.label('recipe_name') 
             ).join(Recipe, SharedRecipe.recipe_id == Recipe.id)\
             .filter(SharedRecipe.receiver_id == user_id)\
             .order_by(SharedRecipe.date_shared.desc())\
             .all()
 
-        # Convert to list of dictionaries
         results = [
             {
                 "id": sr.id,
                 "recipe_id": sr.recipe_id,
                 "sharer_name": sr.sharer_name,
-                "date_shared": sr.date_shared.isoformat(), # Ensure JSON serializable
+                "date_shared": sr.date_shared.isoformat(), 
                 "recipe_name": sr.recipe_name
             } for sr in shared_recipes_data
         ]
         return jsonify(results), 200
     except Exception as e:
         print(f"Error fetching shared recipes: {e}")
-        # import traceback; traceback.print_exc();
         return jsonify({"error": "Failed to fetch shared recipes"}), 500
 
 
 @main.route('/users/search')
-@login_required # Good to protect this, even if it only returns usernames
+@login_required 
 def user_search():
     q = request.args.get('q', '').strip()
     if len(q) < 2: return jsonify([])
     
-    # Exclude current user from search results
-    raw_matches = (db.session.query(User.username) # Query only username
+    raw_matches = (db.session.query(User.username) 
                    .filter(User.username.ilike(f"%{q}%"))
-                   .filter(User.id != current_user.id) # Exclude self
-                   .order_by(User.username).limit(5).all()) # Limit results
+                   .filter(User.id != current_user.id) 
+                   .order_by(User.username).limit(5).all()) 
     
-    usernames = [match[0] for match in raw_matches] # raw_matches is list of tuples
+    usernames = [match[0] for match in raw_matches] 
     return jsonify(usernames)
 
 @main.route("/recipes/<int:recipe_id>/whitelist", methods=["POST"])
@@ -490,20 +536,20 @@ def add_to_whitelist(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
     if recipe.user_id != current_user.id:
         return jsonify({"error": "Unauthorized to manage whitelist for this recipe"}), 403
-    if user_to_add.id == current_user.id: # Owner doesn't need to be whitelisted
-        return jsonify({"message": "Owner already has full access."}), 200 # Or 400 bad request
+    if user_to_add.id == current_user.id: 
+        return jsonify({"message": "Owner already has full access."}), 200
 
     current_recipe_whitelist = list(recipe.whitelist) if recipe.whitelist is not None else []
     if user_to_add.id in current_recipe_whitelist:
-        return jsonify({"message": f"User '{user_to_add.username}' is already in the whitelist"}), 200 # Or 409 conflict
+        return jsonify({"message": f"User '{user_to_add.username}' is already in the whitelist"}), 200 
     
     current_recipe_whitelist.append(user_to_add.id)
-    recipe.whitelist = current_recipe_whitelist # Re-assign to trigger SQLAlchemy change detection for JSON
+    recipe.whitelist = current_recipe_whitelist 
     
     try:
         db.session.commit()
         # Create a SharedRecipe entry for notification purposes
-        recipe_name_for_share = recipe.name
+        # Note: 'recipe_name' is not a direct field in SharedRecipe, but it's used by get_my_shared_recipes via join
         sharer_name_for_share = current_user.username
         existing_shared_notification = SharedRecipe.query.filter_by(
             receiver_id=user_to_add.id, 
@@ -514,11 +560,10 @@ def add_to_whitelist(recipe_id):
             new_shared_notification = SharedRecipe(
                 receiver_id=user_to_add.id,
                 recipe_id=recipe.id,
-                sharer_name=sharer_name_for_share, # Current user is sharing
-                recipe_name=recipe_name_for_share
+                sharer_name=sharer_name_for_share
             )
             db.session.add(new_shared_notification)
-            db.session.commit()
+            db.session.commit() # Commit again for the new SharedRecipe object
             
         shared_url = url_for('main.view_recipe', recipe_id=recipe.id, _external=True)
         return jsonify({"message": f"Recipe '{recipe.name}' access granted to {user_to_add.username}. Link: {shared_url}"}), 200
@@ -536,7 +581,6 @@ def clone_recipe():
     original_recipe = db.session.get(Recipe, recipe_id_to_clone) 
     if not original_recipe: return jsonify({"error": "Original recipe not found"}), 404
     
-    # Check if user can view (and thus clone) the recipe
     is_owner = (original_recipe.user_id == current_user.id)
     current_recipe_whitelist = original_recipe.whitelist if isinstance(original_recipe.whitelist, list) else []
     is_whitelisted = (current_user.id in current_recipe_whitelist)
@@ -547,12 +591,12 @@ def clone_recipe():
     new_recipe = Recipe(
         name=f"{original_recipe.author.username}'s {original_recipe.name} (Clone)",
         category=original_recipe.category, time=original_recipe.time,
-        ingredients=original_recipe.ingredients, # Assumes ingredients are correctly stored/retrieved
+        ingredients=original_recipe.ingredients, 
         instructions=original_recipe.instructions,
-        date=datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'), # New creation date
-        image=original_recipe.image, # Copy image data
-        user_id=current_user.id, # New owner is the current user
-        whitelist=[] # Cloned recipe has its own empty whitelist
+        date=datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'), 
+        image=original_recipe.image, 
+        user_id=current_user.id, 
+        whitelist=[] 
     )
     try:
         db.session.add(new_recipe); db.session.commit()
@@ -572,6 +616,17 @@ def view_logs():
     user_recipes = Recipe.query.filter_by(user_id=user_id).order_by(Recipe.name).all()
     return render_template('logs.html', logs=all_logs, recipes=user_recipes, title='My Cooking Logs')
 
+# New route for viewing a single log detail
+@main.route('/log/<int:log_id>')
+@login_required
+def view_log_detail(log_id):
+    log_entry = CookingLog.query.options(db.joinedload(CookingLog.recipe_logged))\
+                                .filter_by(id=log_id).first_or_404()
+    if log_entry.user_id != current_user.id:
+        abort(403) # Forbidden
+    return render_template('view_log_detail.html', log_entry=log_entry, title='Cooking Log Details')
+
+
 def calculate_user_stats(user_id):
     stats = {
         'total_sessions': 0, 'most_frequent_recipe': {'name': '-', 'count': 0},
@@ -586,7 +641,7 @@ def calculate_user_stats(user_id):
         stats['total_time_logged_hours'] = round(stats['total_time_logged_seconds'] / 3600, 2)
         avg_rating_query = db.session.query(func.avg(CookingLog.rating))\
                               .filter(CookingLog.user_id == user_id, CookingLog.rating.isnot(None)).scalar()
-        stats['average_rating'] = float(avg_rating_query) if avg_rating_query is not None else 0.0 # Handle None from avg
+        stats['average_rating'] = float(avg_rating_query) if avg_rating_query is not None else 0.0
 
         top_recipes = (db.session.query(Recipe.name, func.count(CookingLog.id).label('log_count'))
                        .join(CookingLog, Recipe.id == CookingLog.recipe_id).filter(CookingLog.user_id == user_id)
@@ -596,42 +651,32 @@ def calculate_user_stats(user_id):
             stats['top_recipes_data'] = [{'name': name, 'count': int(count)} for name, count in top_recipes]
         
         today = date.today(); month_counts = {}
-        # Initialize last 12 months including current month
         for i in range(12):
-            # Correctly calculate year and month for previous months
             month_to_calc = today.month - i
             year_to_calc = today.year
             if month_to_calc <= 0:
                 month_to_calc += 12
                 year_to_calc -= 1
             month_counts[f"{year_to_calc:04d}-{month_to_calc:02d}"] = 0
-
-        # Get actual counts from database for the relevant period
-        # Define the start date for the last 12 full months from the beginning of the current month
-        # Or simpler: just query relevant logs and let python sort it out.
-        # For this, we need logs from the last 12 months from today, then group.
         
-        # Determine the first day of the month 11 months ago
-        first_day_of_period = (today.replace(day=1) - timedelta(days=330)).replace(day=1) # Approximation, then snap to 1st
+        first_day_of_period = (today.replace(day=1) - timedelta(days=330)).replace(day=1)
 
         monthly_logs = (db.session.query(func.strftime('%Y-%m', CookingLog.date_cooked).label('month'),
                                         func.count(CookingLog.id).label('count'))
                         .filter(CookingLog.user_id == user_id, 
-                                CookingLog.date_cooked >= first_day_of_period, # Logs from roughly last 12 months
-                                CookingLog.date_cooked <= today) # Up to today
+                                CookingLog.date_cooked >= first_day_of_period, 
+                                CookingLog.date_cooked <= today) 
                         .group_by('month').order_by('month').all())
         
         for month_db, count in monthly_logs:
-            if month_db in month_counts: # Only update if it's one of our target 12 months
+            if month_db in month_counts: 
                 month_counts[month_db] = int(count)
         
-        # Sort keys for chart display (YYYY-MM format sorts naturally)
         sorted_months = sorted(month_counts.keys()) 
         stats['monthly_frequency_data'] = [{'month': m, 'count': month_counts[m]} for m in sorted_months]
 
     except Exception as e: 
         print(f"Error calculating stats for user {user_id}: {e}")
-        # import traceback; traceback.print_exc()
     return stats
 
 # --- End of File ---

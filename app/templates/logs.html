@@ -1,4 +1,3 @@
---- START OF FILE logs.html ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,7 +22,6 @@
     </header>
 
     <div class="container">
-        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages" style="margin-bottom: 20px;">
@@ -57,7 +55,7 @@
                                 <th>Duration</th>
                                 <th>Rating</th>
                                 <th>Notes</th>
-                                <th>Actions</th> {# <-- NEW COLUMN #}
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -70,9 +68,12 @@
                                         {% else %}
                                             <em>Recipe deleted</em>
                                         {% endif %}
+                                        {% if log.image_url %}
+                                            <i class="fas fa-camera" title="Log has image" style="color: var(--accent-color); margin-left: 5px; font-size: 0.9em;"></i>
+                                        {% endif %}
                                     </td>
                                     <td>
-                                        {% if log.duration_seconds is not none %} {# Check for None explicitly #}
+                                        {% if log.duration_seconds is not none %}
                                             {{ (log.duration_seconds // 60) }} min
                                         {% else %}
                                             -
@@ -87,10 +88,10 @@
                                     </td>
                                     <td>{{ log.notes or '-' }}</td>
                                     <td>
-                                        {# <-- NEW EDIT BUTTON --> #}
-                                        <a href="{{ url_for('main.edit_log', log_id=log.id) }}" class="btn btn-primary btn-sm" title="Edit Log">
-                                            <i class="fas fa-edit"></i>
+                                        <a href="{{ url_for('main.view_log_detail', log_id=log.id) }}" class="btn btn-info btn-sm" title="View Full Log">
+                                            <i class="fas fa-eye"></i> View
                                         </a>
+                                        {# Edit button removed from here #}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -107,7 +108,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const recipeFilter = document.getElementById('recipe-filter');
             
-            if (recipeFilter) { // Add null check
+            if (recipeFilter) {
                 recipeFilter.addEventListener('change', function() {
                     const selectedRecipeId = this.value;
                     const allRows = document.querySelectorAll('.logs-table tbody tr');
@@ -125,94 +126,31 @@
     </script>
 
     <style>
-        .logs-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        
-        .logs-table th, .logs-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid var(--light-grey);
-            vertical-align: middle; /* Align content vertically */
-        }
-        
-        .logs-table th {
-            background-color: var(--bg-light);
-            font-weight: 600;
-            color: var(--dark-color);
-        }
-        
-        .logs-table tr:hover {
-            background-color: rgba(255, 123, 84, 0.05);
-        }
-        
-        .filter-controls {
-            display: flex;
-            gap: 20px;
-            align-items: flex-end;
-        }
-
-        /* Ensure buttons in table cells are spaced well if multiple are added later */
-        .logs-table td .btn {
-            margin-right: 5px;
-        }
-        .logs-table td .btn:last-child {
-            margin-right: 0;
-        }
+        .logs-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .logs-table th, .logs-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--light-grey); vertical-align: middle; }
+        .logs-table th { background-color: var(--bg-light); font-weight: 600; color: var(--dark-color); }
+        .logs-table tr:hover { background-color: rgba(255, 123, 84, 0.05); }
+        .filter-controls { display: flex; gap: 20px; align-items: flex-end; }
+        .logs-table td .btn { margin-right: 5px; }
+        .logs-table td .btn:last-child { margin-right: 0; }
         
         @media (max-width: 768px) {
-            .logs-table {
-                display: block;
-                overflow-x: auto;
-            }
-            /* Make table headers and cells behave more like blocks on small screens */
-            .logs-table thead, .logs-table tbody, .logs-table th, .logs-table td, .logs-table tr { 
-                display: block; 
-            }
-            .logs-table thead tr { 
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
-            }
+            .logs-table { display: block; overflow-x: auto; }
+            .logs-table thead, .logs-table tbody, .logs-table th, .logs-table td, .logs-table tr { display: block; }
+            .logs-table thead tr { position: absolute; top: -9999px; left: -9999px; }
             .logs-table tr { border: 1px solid #ccc; margin-bottom: 10px; }
-            .logs-table td { 
-                border: none;
-                border-bottom: 1px solid #eee; 
-                position: relative;
-                padding-left: 50%; /* Space for label */
-                text-align: right; /* Align content to the right */
-            }
-            .logs-table td:before { 
-                position: absolute;
-                top: 50%;
-                left: 15px;
-                transform: translateY(-50%);
-                width: 45%; /* Width of the label */
-                padding-right: 10px; 
-                white-space: nowrap;
-                text-align: left; /* Align label text to the left */
-                font-weight: bold;
-            }
-            /* Labels for cells */
+            .logs-table td { border: none; border-bottom: 1px solid #eee; position: relative; padding-left: 50%; text-align: right; }
+            .logs-table td:before { position: absolute; top: 50%; left: 15px; transform: translateY(-50%); width: 45%; padding-right: 10px; white-space: nowrap; text-align: left; font-weight: bold; }
             .logs-table td:nth-of-type(1):before { content: "Date"; }
             .logs-table td:nth-of-type(2):before { content: "Recipe"; }
             .logs-table td:nth-of-type(3):before { content: "Duration"; }
             .logs-table td:nth-of-type(4):before { content: "Rating"; }
             .logs-table td:nth-of-type(5):before { content: "Notes"; }
             .logs-table td:nth-of-type(6):before { content: "Actions"; }
-            .logs-table td:nth-of-type(6) { text-align: left; padding-left: 15px; } /* Align actions to left on mobile */
-            .logs-table td:nth-of-type(6):before { display: none; } /* No label for actions on mobile if content is clear */
-
-
-            .filter-controls {
-                flex-direction: column;
-                gap: 10px;
-                align-items: stretch;
-            }
+            .logs-table td:nth-of-type(6) { text-align: left; padding-left: 15px; } 
+            .logs-table td:nth-of-type(6):before { display: none; }
+            .filter-controls { flex-direction: column; gap: 10px; align-items: stretch; }
         }
     </style>
 </body>
 </html>
---- END OF FILE logs.html ---
