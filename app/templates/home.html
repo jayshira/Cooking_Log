@@ -21,11 +21,11 @@
             <!-- User Authentication Links (Keep as is) -->
             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
                 {% if current_user.is_authenticated %}
-                    <span style="margin-right: 15px; color: white; opacity: 0.9;">
+                    <span style="margin-right: 15px; color: white; opacity: 0.9;" id ="welcome-message">
                         Welcome, {{ current_user.username }}!
                     </span>
                     <!-- Removed redundant My Kitchen/Dashboard links, added Logout -->
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" id="logout" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 {% else %}
                     <!-- Should not happen on this page due to @login_required, but keep for safety -->
                     <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Log In</a>
@@ -82,8 +82,8 @@
 
         <div class="tabs">
             <!-- Renamed Recipes tab, adjusted others -->
-            <div class="tab active" data-tab="my-recipes">My Recipes</div>
-            <div class="tab" data-tab="add">Add Recipe</div>
+            <div class="tab active" data-tab="my-recipes" id="my-recipes-button">My Recipes</div>
+            <div class="tab" data-tab="add" id="add-recipe-button">Add Recipe</div>
             <!-- Changed Stats tab name -->
             <div class="tab" data-tab="recipe-stats">Recipe Stats</div>
             <div class="tab" data-tab="share">Share Recipe</div>
@@ -149,7 +149,7 @@
                          </div>
                          <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
                      </div>
-                     <button type="submit" class="btn"><i class="fas fa-save"></i> Save Recipe</button>
+                     <button type="submit" class="btn"><i class="fas fa-save" id="save-recipe"></i> Save Recipe</button>
                  </form>
              </div>
          </div>
