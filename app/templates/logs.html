@@ -1,3 +1,4 @@
+--- START OF FILE logs.html ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,6 +57,7 @@
                                 <th>Duration</th>
                                 <th>Rating</th>
                                 <th>Notes</th>
+                                <th>Actions</th> {# <-- NEW COLUMN #}
                             </tr>
                         </thead>
                         <tbody>
@@ -70,7 +72,7 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if log.duration_seconds %}
+                                        {% if log.duration_seconds is not none %} {# Check for None explicitly #}
                                             {{ (log.duration_seconds // 60) }} min
                                         {% else %}
                                             -
@@ -84,6 +86,12 @@
                                         {% endif %}
                                     </td>
                                     <td>{{ log.notes or '-' }}</td>
+                                    <td>
+                                        {# <-- NEW EDIT BUTTON --> #}
+                                        <a href="{{ url_for('main.edit_log', log_id=log.id) }}" class="btn btn-primary btn-sm" title="Edit Log">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -99,18 +107,20 @@
         document.addEventListener('DOMContentLoaded', function() {
             const recipeFilter = document.getElementById('recipe-filter');
             
-            recipeFilter.addEventListener('change', function() {
-                const selectedRecipeId = this.value;
-                const allRows = document.querySelectorAll('.logs-table tbody tr');
-                
-                allRows.forEach(row => {
-                    if (!selectedRecipeId || row.dataset.recipeId === selectedRecipeId) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
+            if (recipeFilter) { // Add null check
+                recipeFilter.addEventListener('change', function() {
+                    const selectedRecipeId = this.value;
+                    const allRows = document.querySelectorAll('.logs-table tbody tr');
+                    
+                    allRows.forEach(row => {
+                        if (!selectedRecipeId || row.dataset.recipeId === selectedRecipeId) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
                 });
-            });
+            }
         });
     </script>
 
@@ -125,6 +135,7 @@
             padding: 12px 15px;
             text-align: left;
             border-bottom: 1px solid var(--light-grey);
+            vertical-align: middle; /* Align content vertically */
         }
         
         .logs-table th {
@@ -142,13 +153,59 @@
             gap: 20px;
             align-items: flex-end;
         }
+
+        /* Ensure buttons in table cells are spaced well if multiple are added later */
+        .logs-table td .btn {
+            margin-right: 5px;
+        }
+        .logs-table td .btn:last-child {
+            margin-right: 0;
+        }
         
         @media (max-width: 768px) {
             .logs-table {
                 display: block;
                 overflow-x: auto;
             }
-            
+            /* Make table headers and cells behave more like blocks on small screens */
+            .logs-table thead, .logs-table tbody, .logs-table th, .logs-table td, .logs-table tr { 
+                display: block; 
+            }
+            .logs-table thead tr { 
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            .logs-table tr { border: 1px solid #ccc; margin-bottom: 10px; }
+            .logs-table td { 
+                border: none;
+                border-bottom: 1px solid #eee; 
+                position: relative;
+                padding-left: 50%; /* Space for label */
+                text-align: right; /* Align content to the right */
+            }
+            .logs-table td:before { 
+                position: absolute;
+                top: 50%;
+                left: 15px;
+                transform: translateY(-50%);
+                width: 45%; /* Width of the label */
+                padding-right: 10px; 
+                white-space: nowrap;
+                text-align: left; /* Align label text to the left */
+                font-weight: bold;
+            }
+            /* Labels for cells */
+            .logs-table td:nth-of-type(1):before { content: "Date"; }
+            .logs-table td:nth-of-type(2):before { content: "Recipe"; }
+            .logs-table td:nth-of-type(3):before { content: "Duration"; }
+            .logs-table td:nth-of-type(4):before { content: "Rating"; }
+            .logs-table td:nth-of-type(5):before { content: "Notes"; }
+            .logs-table td:nth-of-type(6):before { content: "Actions"; }
+            .logs-table td:nth-of-type(6) { text-align: left; padding-left: 15px; } /* Align actions to left on mobile */
+            .logs-table td:nth-of-type(6):before { display: none; } /* No label for actions on mobile if content is clear */
+
+
             .filter-controls {
                 flex-direction: column;
                 gap: 10px;
@@ -158,3 +215,4 @@
     </style>
 </body>
 </html>
+--- END OF FILE logs.html ---
