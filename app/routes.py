@@ -108,7 +108,6 @@ def log_cooking_session(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id) 
     
     # Permission check: user must own OR be whitelisted to log for this recipe.
-    # This check is also in start_cooking_session, but good to have here too.
     is_owner_of_original = (recipe.user_id == current_user.id)
     current_recipe_whitelist = recipe.whitelist if isinstance(recipe.whitelist, list) else []
     is_whitelisted_for_original = (current_user.id in current_recipe_whitelist)
@@ -131,7 +130,6 @@ def log_cooking_session(recipe_id):
                 return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
             try:
                 image_data = image_file.read()
-                # Basic size check (e.g., 5MB)
                 if len(image_data) > 5 * 1024 * 1024:
                     flash('Image file is too large (max 5MB).', 'danger')
                     return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
@@ -141,7 +139,6 @@ def log_cooking_session(recipe_id):
             except Exception as img_e:
                 print(f"Error processing log image: {img_e}")
                 flash('Could not process the uploaded image.', 'danger')
-                # Potentially allow logging without image or redirect
 
         if not date_cooked_str:
              flash('Date cooked is required.', 'danger')
@@ -178,9 +175,8 @@ def log_cooking_session(recipe_id):
                         for i in range(1, len(all_logs_dates)):
                             if (all_logs_dates[i] - all_logs_dates[i-1]).days == 1:
                                 current_recalculated_streak += 1
-                            elif (all_logs_dates[i] - all_logs_dates[i-1]).days > 1: # Gap resets streak
+                            elif (all_logs_dates[i] - all_logs_dates[i-1]).days > 1: 
                                 current_recalculated_streak = 1 
-                            # If dates are same or out of order but not gapped, streak continues from last point
                     user.current_streak = current_recalculated_streak
         else: 
             user.current_streak = 1
@@ -202,7 +198,7 @@ def log_cooking_session(recipe_id):
         new_log = CookingLog(
             user_id=current_user.id, recipe_id=recipe.id, date_cooked=date_cooked,
             duration_seconds=duration_seconds, rating=rating, notes=notes,
-            image_url=log_image_url # Save the image URL
+            image_url=log_image_url 
         )
         db.session.add(new_log); db.session.add(user); db.session.commit()
         flash(f'Successfully logged your cooking session for "{recipe.name}"!', 'success')
@@ -266,14 +262,13 @@ def edit_log(log_id):
                     flash('Invalid rating format.', 'danger')
                     return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
 
-            # Handle image update/removal
             if new_image_file and new_image_file.filename != '':
                 if not new_image_file.mimetype.startswith('image/'):
                     flash('Invalid new image file type. Please upload a valid image.', 'danger')
                     return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
                 try:
                     image_data = new_image_file.read()
-                    if len(image_data) > 5 * 1024 * 1024: # 5MB limit
+                    if len(image_data) > 5 * 1024 * 1024: 
                         flash('New image file is too large (max 5MB).', 'danger')
                         return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
                     base64_image = base64.b64encode(image_data).decode('utf-8')
@@ -283,7 +278,6 @@ def edit_log(log_id):
                     flash('Could not process the new uploaded image.', 'danger')
             elif remove_current_image:
                 log_entry.image_url = None
-            # If neither, image_url remains unchanged.
 
             log_entry.date_cooked = new_date_cooked
             log_entry.duration_seconds = new_duration_seconds
@@ -323,7 +317,7 @@ def edit_log(log_id):
             db.session.commit()
 
             flash('Cooking log updated successfully!', 'success')
-            return redirect(url_for('main.view_log_detail', log_id=log_entry.id)) # Redirect to detail view
+            return redirect(url_for('main.view_log_detail', log_id=log_entry.id)) 
 
         except Exception as e:
             db.session.rollback()
@@ -381,25 +375,39 @@ def add_recipe():
 @login_required
 def delete_recipe_api(recipe_id):
     try:
-        recipe = Recipe.query.get_or_404(recipe_id)
-        if recipe.user_id != current_user.id:
+        recipe_to_delete = Recipe.query.get_or_404(recipe_id)
+        if recipe_to_delete.user_id != current_user.id:
              return jsonify({"error": "Unauthorized to delete this recipe"}), 403
-        if CookingLog.query.filter_by(recipe_id=recipe.id).first():
-            # Check if any of these logs are by the current user to be more specific
-            user_logs_for_recipe = CookingLog.query.filter_by(recipe_id=recipe.id, user_id=current_user.id).first()
-            if user_logs_for_recipe:
-                return jsonify({"error": "Cannot delete recipe. You have existing cooking logs for it. Please delete those logs first or contact support."}), 409 # 409 Conflict
-            # If logs exist but not for this user, deletion might be allowed, or a different message.
-            # For now, any log blocks deletion by owner.
-            return jsonify({"error": "Cannot delete recipe with existing cooking logs. Please delete logs first or this feature needs to be implemented."}), 409
 
-        db.session.delete(recipe)
+        # Find and delete all cooking logs associated with this recipe *by any user*.
+        # If you only want to delete logs by the recipe owner, add: .filter_by(user_id=current_user.id)
+        # However, generally, if a recipe is gone, its logs are less meaningful regardless of who logged them.
+        # This also handles logs from users who might have cloned/been whitelisted for the recipe.
+        # Be cautious with this behavior.
+        logs_to_delete = CookingLog.query.filter_by(recipe_id=recipe_to_delete.id).all()
+        for log in logs_to_delete:
+            db.session.delete(log)
+        
+        # After deleting associated logs, delete the recipe itself
+        db.session.delete(recipe_to_delete)
+        
+        # Also, remove any SharedRecipe entries related to this recipe_id
+        # to prevent dangling references in other users' mailboxes.
+        shared_entries_to_delete = SharedRecipe.query.filter_by(recipe_id=recipe_to_delete.id).all()
+        for shared_entry in shared_entries_to_delete:
+            db.session.delete(shared_entry)
+
         db.session.commit()
-        return jsonify({"message": "Recipe deleted successfully"}), 200
+        # Recalculate streaks for all users whose logs were deleted (if necessary and applicable)
+        # This can be complex. For now, we'll skip direct streak recalculation here for simplicity
+        # as logs are deleted, but a more robust system might trigger this.
+        # The user deleting the recipe will have their streak updated naturally on next log or edit.
+        
+        return jsonify({"message": "Recipe and all associated cooking logs deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting recipe {recipe_id}: {e}")
-        return jsonify({"error": "Failed to delete recipe"}), 500
+        print(f"Error deleting recipe {recipe_id} and its logs: {e}")
+        return jsonify({"error": "Failed to delete recipe and its logs"}), 500
 
 
 @main.route('/api/recipes/<int:recipe_id>', methods=['PUT'])
@@ -468,7 +476,6 @@ def create_shared_recipe():
             receiver_id=receiver_id,
             recipe_id=recipe_id,
             sharer_name=sharer_name,
-            # recipe_name=recipe_to_share.name # Not needed, SharedRecipe doesn't have this field. Whitelist relies on Recipe name.
             )
         db.session.add(new_shared); db.session.commit()
     except ValueError: return jsonify({"error": "Invalid ID format"}), 400
@@ -548,8 +555,6 @@ def add_to_whitelist(recipe_id):
     
     try:
         db.session.commit()
-        # Create a SharedRecipe entry for notification purposes
-        # Note: 'recipe_name' is not a direct field in SharedRecipe, but it's used by get_my_shared_recipes via join
         sharer_name_for_share = current_user.username
         existing_shared_notification = SharedRecipe.query.filter_by(
             receiver_id=user_to_add.id, 
@@ -563,7 +568,7 @@ def add_to_whitelist(recipe_id):
                 sharer_name=sharer_name_for_share
             )
             db.session.add(new_shared_notification)
-            db.session.commit() # Commit again for the new SharedRecipe object
+            db.session.commit() 
             
         shared_url = url_for('main.view_recipe', recipe_id=recipe.id, _external=True)
         return jsonify({"message": f"Recipe '{recipe.name}' access granted to {user_to_add.username}. Link: {shared_url}"}), 200
@@ -616,14 +621,13 @@ def view_logs():
     user_recipes = Recipe.query.filter_by(user_id=user_id).order_by(Recipe.name).all()
     return render_template('logs.html', logs=all_logs, recipes=user_recipes, title='My Cooking Logs')
 
-# New route for viewing a single log detail
 @main.route('/log/<int:log_id>')
 @login_required
 def view_log_detail(log_id):
     log_entry = CookingLog.query.options(db.joinedload(CookingLog.recipe_logged))\
                                 .filter_by(id=log_id).first_or_404()
     if log_entry.user_id != current_user.id:
-        abort(403) # Forbidden
+        abort(403) 
     return render_template('view_log_detail.html', log_entry=log_entry, title='Cooking Log Details')
 
 
