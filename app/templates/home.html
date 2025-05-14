@@ -254,12 +254,27 @@
     <!-- Pass user ID AND log stats data to JS -->
     <!-- **** CORRECTED SCRIPT BLOCK **** -->
    <!-- Securely Pass User ID and Log Stats Data to JS -->
-<script type="text/javascript">
+   <script type="text/javascript">
+    // Make LOG_STATS_DATA and CURRENT_USER_ID globally accessible
+    var CURRENT_USER_ID = JSON.parse('{{ current_user.id | tojson | safe }}');
+    var LOG_STATS_DATA = JSON.parse('{{ log_stats | tojson | safe }}');
+
     document.addEventListener("DOMContentLoaded", function() {
-        const CURRENT_USER_ID = JSON.parse('{{ current_user.id | tojson | safe }}');
-        const LOG_STATS_DATA = JSON.parse('{{ log_stats | tojson | safe }}');
-        console.log("User ID:", CURRENT_USER_ID);
-        console.log("Log Stats:", LOG_STATS_DATA);
+        console.log("User ID (DOMContentLoaded):", CURRENT_USER_ID);
+        console.log("Log Stats (DOMContentLoaded):", LOG_STATS_DATA);
+
+        const statsTab = document.querySelector('.tab[data-tab="recipe-stats"]');
+        if (statsTab) {
+            statsTab.addEventListener('click', function() {
+                if (typeof LOG_STATS_DATA !== 'undefined' && LOG_STATS_DATA !== null) {
+                    updateStats();
+                } else {
+                    console.warn("LOG_STATS_DATA is not available when trying to update stats.");
+                }
+            });
+        } else {
+            console.warn("Recipe stats tab not found in DOM.");
+        }
     });
 </script>
 

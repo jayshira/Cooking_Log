@@ -16,6 +16,11 @@ PERTH_TZ = ZoneInfo("Australia/Perth")
 main = Blueprint('main', __name__)
 
 # --- HTML Page Routes ---
+@main.route('/')
+@main.route('/index')
+def index():
+    return redirect(url_for('main.home'))  
+
 
 @main.route('/')
 @main.route('/home')
@@ -24,7 +29,7 @@ def home():
     user_id = current_user.id
     user = db.session.get(User, user_id)
 
-    # --- Fetch Recent Logs and Streak (Existing) ---
+    # Fetch Recent Logs and Streak
     recent_logs = []
     streak = 0
     if user:
@@ -36,14 +41,13 @@ def home():
     else:
         flash("Error loading user data.", "warning")
 
-    # --- Calculate Log-Based Statistics ---
-    stats = calculate_user_stats(user_id)  # Call the external function here
+    # Calculate Log-Based Statistics
+    stats = calculate_user_stats(user_id)
 
     return render_template('home.html', 
                          recent_logs=recent_logs, 
                          streak=streak,
-                         stats=stats,
-                         log_stats=stats)  # Make sure to pass stats as log_stats if your template expects it
+                         log_stats=stats)  # Make sure this matches the template
 
 # --- Route to view a specific recipe page ---
 @main.route('/view_recipe/<int:recipe_id>')
