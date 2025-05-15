@@ -754,7 +754,13 @@ function toggleChart(chartType) {
     const newState = state === 'all-time' ? 'this-month' : 'all-time';
     
     if (chartType === 'frequency') {
-        chartStates[chartType] = state === 'monthly' ? 'weekly' : 'monthly';
+        if (state === 'weekly') {
+            document.getElementById('frequency-title').textContent = 'Monthly Cooking Frequency';
+        } else {
+            document.getElementById('frequency-title').textContent = 'This Week\'s Cooking Frequency';
+        }
+        
+        chartStates[chartType] = state === 'monthly' ? 'weekly' : 'monthly';    
     } else {
         chartStates[chartType] = newState;
     }
@@ -763,7 +769,7 @@ function toggleChart(chartType) {
     const button = event.target.closest('button');
     if (button) {
         const toggleText = chartType === 'frequency' ? 
-            (chartStates[chartType] === 'monthly' ? 'Show Weekly' : 'Show Monthly') :
+            (chartStates[chartType] === 'monthly' ? 'Show This Week' : 'Show Monthly View') :
             (chartStates[chartType] === 'all-time' ? 'Show This Month' : 'Show All Time');
         button.innerHTML = `<i class="fas fa-exchange-alt"></i> ${toggleText}`;
     }
@@ -928,11 +934,8 @@ function updateTopRecipesChart(topRecipesData) {
                 }
             },
             plugins: {
-                legend: { display: false }, // No legend needed for single dataset
+                legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'var(--dark-color)',
-                    titleColor: 'var(--white)',
-                    bodyColor: 'var(--white)',
                     callbacks: {
                         label: function(context) {
                             return ` Logs: ${context.raw || 0}`;
@@ -988,9 +991,6 @@ function updateMonthlyFrequencyChart(frequencyData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                     backgroundColor: 'var(--dark-color)',
-                     titleColor: 'var(--white)',
-                     bodyColor: 'var(--white)',
                      callbacks: {
                         title: function(context) {
                              // Format title e.g., "October 2023"

@@ -599,9 +599,8 @@ body > .custom-alert {
 .chart-toggle-btn {
     margin-left: 10px; 
     font-size: 0.8rem;
-    align-content: right;
+    text-align: right;
 }
-
 
 /* --- Share Section --- */
 .share-options {
