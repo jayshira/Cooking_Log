@@ -931,6 +931,23 @@ footer {
     align-items: flex-end;
 }
 
+
+/* Information icon in add recipe */
+.info-icon {
+  margin-left: 5px;
+  font-size: 0.75em;
+  color: var(--grey);
+  vertical-align: text-bottom;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.info-icon:hover {
+  color: var(--primary-color);
+}
+
+
+
 @media (max-width: 768px) {
     .logs-table {
         display: block;
