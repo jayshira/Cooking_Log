@@ -107,10 +107,12 @@ class CookingLog(db.Model):
     rating = db.Column(db.Integer, nullable=True) 
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    image_url = db.Column(db.Text, nullable=True) # Stores base64 encoded image or path
 
     def __repr__(self):
         recipe_name = self.recipe_logged.name if self.recipe_logged else 'Unknown Recipe'
-        return f"<CookingLog {self.id} for '{recipe_name}' by User {self.user_id} on {self.date_cooked}>"
+        has_image_str = " (has image)" if self.image_url else ""
+        return f"<CookingLog {self.id} for '{recipe_name}' by User {self.user_id} on {self.date_cooked}{has_image_str}>"
 
 class SharedRecipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -120,7 +122,7 @@ class SharedRecipe(db.Model):
     date_shared = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
-        recipe = Recipe.query.get(self.recipe_id)  # Corrected query
+        recipe = Recipe.query.get(self.recipe_id) 
         return {
             'id': self.id,
             'receiver_id': self.receiver_id,
