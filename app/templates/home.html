@@ -107,98 +107,119 @@
 
         <!-- Add Recipe Tab (Keep as is) -->
         <div id="add" class="tab-content">
-             <div class="card">
-                 <h2><i class="fas fa-plus-circle"></i> Add New Recipe</h2>
-                 <form id="recipe-form">
-                     <!-- Form content remains the same -->
-                     <div class="form-group">
-                         <label for="recipe-name">Recipe Name</label>
-                         <input type="text" id="recipe-name" required>
-                     </div>
-                     <div class="form-group">
-                         <label for="recipe-category">Category</label>
-                         <select id="recipe-category" required>
-                             <option value="">Select a category</option>
-                             <option value="breakfast">Breakfast</option>
-                             <option value="lunch">Lunch</option>
-                             <option value="dinner">Dinner</option>
-                             <option value="dessert">Dessert</option>
-                             <option value="snack">Snack</option>
-                             <option value="beverage">Beverage</option>
-                             <option value="side">Side Dish</option>
-                             <option value="other">Other</option>
-                         </select>
-                     </div>
-                     <div class="form-group">
-                         <label for="recipe-time">Total Time (minutes)</label> <!-- Clarified label -->
-                         <input type="number" id="recipe-time" required min="1">
-                     </div>
-                     <div class="form-group">
-                         <label for="recipe-ingredients">Ingredients</label>
-                         <textarea id="recipe-ingredients" placeholder="List ingredients, one per line or separated by commas" required></textarea>
-                     </div>
-                     <div class="form-group">
-                         <label for="recipe-instructions">Instructions</label>
-                         <textarea id="recipe-instructions" required></textarea>
-                     </div>
-                     <div class="form-group">
-                         <label>Upload Image (Optional)</label>
-                         <div class="file-upload" id="file-upload">
-                             <i class="fas fa-cloud-upload-alt"></i>
-                             <p>Click or drag image here</p> <!-- Updated text -->
-                             <input type="file" id="recipe-image" accept="image/*">
-                         </div>
-                         <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
-                     </div>
-                     <button type="submit" class="btn"><i class="fas fa-save"></i> Save Recipe</button>
-                 </form>
-             </div>
-         </div>
+            <div class="card">
+                <h2><i class="fas fa-plus-circle"></i> Add New Recipe</h2>
+                <form id="recipe-form">
+                    <!-- Form content remains the same -->
+                    <div class="form-group">
+                        <label for="recipe-name">Recipe Name</label>
+                        <input type="text" id="recipe-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="recipe-category">Category</label>
+                        <select id="recipe-category" required>
+                            <option value="">Select a category</option>
+                            <option value="breakfast">Breakfast</option>
+                            <option value="lunch">Lunch</option>
+                            <option value="dinner">Dinner</option>
+                            <option value="dessert">Dessert</option>
+                            <option value="snack">Snack</option>
+                            <option value="beverage">Beverage</option>
+                            <option value="side">Side Dish</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="recipe-time">Total Time (minutes)</label> <!-- Clarified label -->
+                        <input type="number" id="recipe-time" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="recipe-ingredients">Ingredients</label>
+                        <textarea id="recipe-ingredients" placeholder="List ingredients, one per line or separated by commas" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="recipe-instructions">Instructions</label>
+                        <textarea id="recipe-instructions" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Upload Image (Optional)</label>
+                        <div class="file-upload" id="file-upload">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Click or drag image here</p> <!-- Updated text -->
+                            <input type="file" id="recipe-image" accept="image/*">
+                        </div>
+                        <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
+                    </div>
+                    <button type="submit" class="btn"><i class="fas fa-save"></i> Save Recipe</button>
+                </form>
+            </div>
+        </div>
 
-         <!-- **** MODIFIED Recipe Stats Tab **** -->
-         <div id="recipe-stats" class="tab-content">
-              <div class="card">
-                  <!-- NEW TITLE -->
-                  <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                    <span><i class="fas fa-chart-line"></i> My Cooking Statistics</span>
-                    <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-list"></i> View Logs
-                    </a>
-                </h2>
-                  <!-- NEW DESCRIPTION -->
-                  <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">
-                      Statistics based on your logged cooking sessions.
-                  </p>
-                  <!-- NEW STATS GRID -->
-                  <div class="stats-grid" id="log-stats-display">
-                      <div class="stat-card">
-                          <div class="stat-label">Total Sessions Logged</div>
-                          <div class="stat-value" id="total-sessions">0</div>
-                      </div>
-                      <div class="stat-card">
-                          <div class="stat-label">Most Frequent Recipe</div>
-                          <div class="stat-value" id="most-frequent-recipe">-</div>
-                          <div class="stat-label" id="most-frequent-count"></div>
-                      </div>
-                      <div class="stat-card">
-                          <div class="stat-label">Total Time Logged</div>
-                          <div class="stat-value" id="total-time-logged">0h 0m</div>
-                          <div class="stat-label">(Sum of durations)</div>
-                      </div>
-                      <div class="stat-card">
-                          <div class="stat-label">Average Rating</div>
-                          <div class="stat-value" id="average-rating">N/A</div>
-                          <div class="stat-label">(1-5 stars)</div>
-                      </div>
-                  </div>
-                  <!-- NEW CHARTS -->
-                  <h3 style="margin-top: 30px;">Top 5 Most Logged Recipes</h3>
-                  <div class="chart-container"><canvas id="top-recipes-chart"></canvas></div>
-                  <h3 style="margin-top: 30px;">Monthly Cooking Frequency (Last 12 Months)</h3>
-                  <div class="chart-container"><canvas id="frequency-chart"></canvas></div>
-              </div>
-          </div>
-         <!-- **** END MODIFIED Recipe Stats Tab **** -->
+        <!-- **** MODIFIED Recipe Stats Tab **** -->
+        <div id="recipe-stats" class="tab-content">
+            <div class="card">
+                <!-- NEW TITLE -->
+                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fas fa-chart-line"></i> My Cooking Statistics</span>
+                <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-list"></i> View Logs
+                </a>
+            </h2>
+                <!-- NEW DESCRIPTION -->
+                <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">
+                    Statistics based on your logged cooking sessions.
+                </p>
+                <!-- NEW STATS GRID -->
+                <div class="stats-grid" id="log-stats-display">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Sessions Logged</div>
+                        <div class="stat-value" id="total-sessions">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Most Frequent Recipe</div>
+                        <div class="stat-value" id="most-frequent-recipe">-</div>
+                        <div class="stat-label" id="most-frequent-count"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Time Logged</div>
+                        <div class="stat-value" id="total-time-logged">0h 0m</div>
+                        <div class="stat-label">(Sum of durations)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Average Rating</div>
+                        <div class="stat-value" id="average-rating">N/A</div>
+                        <div class="stat-label">(1-5 stars)</div>
+                    </div>
+                </div>
+                <!-- NEW CHARTS -->
+                <h3 style="margin-top: 30px;">
+                    Top 5 Most Logged Recipes
+                    <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('top-recipes')">
+                        <i class="fas fa-exchange-alt"></i> Show This Month
+                    </button>
+                </h3>
+                <div class="chart-container"><canvas id="top-recipes-chart"></canvas></div>
+                
+                <!-- New Top Rated Section -->
+                <h3 style="margin-top: 30px;">
+                    Top 5 Highest Rated Recipes
+                    <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('top-rated')">
+                        <i class="fas fa-exchange-alt"></i> Show This Month
+                    </button>
+                </h3>
+                <div class="chart-container"><canvas id="top-rated-chart"></canvas></div>
+                
+                <!-- Modified Frequency Section -->
+                <h3 style="margin-top: 30px;">
+                    Monthly Cooking Frequency
+                    <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('frequency')">
+                        <i class="fas fa-exchange-alt"></i> Show Weekly
+                    </button>
+                </h3>
+                <div class="chart-container"><canvas id="frequency-chart"></canvas></div>
+            </div>
+        </div>
+        <!-- **** END MODIFIED Recipe Stats Tab **** -->
 
         <!-- Share Tab (Keep as is) -->
         <div id="share" class="tab-content">
