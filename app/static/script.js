@@ -1043,62 +1043,7 @@ function handleFileChange(fileInput) {
     }
 }
 
-// Share recipe via different platforms
-function shareRecipe(platform) {
-    const shareRecipeSelect = document.getElementById('share-recipe');
-    if (!shareRecipeSelect) return;
-
-    const recipeId = shareRecipeSelect.value;
-    if (!recipeId) {
-        alert('Please select a recipe to share first.');
-        return;
-    }
-    // Find recipe in local cache for sharing details
-    const recipe = currentRecipes.find(r => r.id == recipeId);
-    if (!recipe) {
-        alert('Selected recipe details not found.');
-        return;
-    }
-
-    const shareText = `Check out my recipe for "${recipe.name}"! Prep time: ${recipe.time} mins. Category: ${recipe.category}.`;
-    const appUrl = window.location.origin; // Base URL of the app
-    // Construct a more specific URL if you have public recipe pages later
-    // const recipeUrl = `${appUrl}/recipe/${recipe.id}`; // Example
-    const recipeUrl = appUrl; // For now, just link to the app
-
-    const shareSubject = `My KitchenLog Recipe: ${recipe.name}`;
-    let ingredientsList = Array.isArray(recipe.ingredients) ? recipe.ingredients.join('\n- ') : recipe.ingredients;
-    const shareBody = `${shareText}\n\nIngredients:\n- ${ingredientsList}\n\nInstructions:\n${recipe.instructions}\n\nShared from my KitchenLog: ${recipeUrl}`;
-    let shareUrl = '';
-
-    switch (platform) {
-        case 'facebook':
-            // FB Sharer needs a real URL to scrape, using appUrl for now
-            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipeUrl)}"e=${encodeURIComponent(shareText)}`;
-            break;
-        case 'twitter':
-            shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(recipeUrl)}`;
-            break;
-        case 'whatsapp':
-            // WhatsApp Web/App link
-            shareUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' Shared from KitchenLog: ' + recipeUrl)}`;
-            break;
-        case 'email':
-            shareUrl = `mailto:?subject=${encodeURIComponent(shareSubject)}&body=${encodeURIComponent(shareBody)}`;
-            break;
-        default: return;
-    }
-    if (shareUrl) {
-        window.open(shareUrl, '_blank', 'noopener,noreferrer,width=600,height=400');
-    }
-}
-
-function closeAlert() {
-    const alertBox = document.querySelector('.custom-alert');
-    if (alertBox) {
-        alertBox.remove();
-    }
-}
+// Share recipe via different platforms -- deleted 
 
 // Shared Recipes Popup Helper Functions
 async function fetchSharedRecipes() {

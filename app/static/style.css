@@ -635,10 +635,6 @@ body > .custom-alert {
     text-align: center;
 }
 /* Icon specific colors (optional) */
-.share-btn.facebook .fab { color: #1877F2; }
-.share-btn.twitter .fab { color: #1DA1F2; }
-.share-btn.whatsapp .fab { color: #25D366; }
-.share-btn.email .fas { color: var(--accent-color); }
 .share-btn .fa-link { color: var(--secondary-color); }
 
 /* Share Preview Styles */
