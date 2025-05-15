@@ -15,6 +15,45 @@ import base64 # For image encoding
 PERTH_TZ = ZoneInfo("Australia/Perth")
 
 main = Blueprint('main', __name__)
+# --- Helper function for streak calculation ---
+def _recalculate_user_streak_and_last_cooked(user_id):
+    user = db.session.get(User, user_id)
+    if not user:
+        return
+
+    all_user_log_dates = sorted(list(set(
+        log.date_cooked for log in CookingLog.query.filter_by(user_id=user.id).all()
+    )))
+
+    if not all_user_log_dates:
+        user.current_streak = 0
+        user.last_cooked_date = None
+    else:
+        recalculated_streak = 0
+        if len(all_user_log_dates) > 0:
+            recalculated_streak = 1 
+            for i in range(1, len(all_user_log_dates)):
+                days_diff_recalc = (all_user_log_dates[i] - all_user_log_dates[i-1]).days
+                if days_diff_recalc == 1:
+                    recalculated_streak += 1
+                elif days_diff_recalc > 1: 
+                    recalculated_streak = 1 
+        
+        user.current_streak = recalculated_streak
+        user.last_cooked_date = all_user_log_dates[-1] 
+
+        today_perth = datetime.now(PERTH_TZ).date()
+        if user.last_cooked_date:
+            days_since_last_actual_cook = (today_perth - user.last_cooked_date).days
+            if days_since_last_actual_cook > 1: 
+                user.current_streak = 0
+        else: 
+            user.current_streak = 0
+            
+    if user.current_streak < 0: 
+        user.current_streak = 0
+    
+    db.session.add(user) # Add user to session for potential commit by caller
 
 # --- HTML Page Routes ---
 @main.route('/')
@@ -27,11 +66,10 @@ def index():
 @login_required
 def home():
     user_id = current_user.id
-    # Fetch user fresh from DB to ensure data is up-to-date
     user = db.session.get(User, user_id) 
 
     recent_logs = []
-    streak_display_value = 0 # Default to 0
+    streak_display_value = user.current_streak if user and user.current_streak is not None else 0
 
     if user:
         recent_logs = CookingLog.query.filter_by(user_id=user_id)\
@@ -39,18 +77,21 @@ def home():
                                     .order_by(CookingLog.date_cooked.desc(), CookingLog.created_at.desc())\
                                     .limit(5).all()
         
+        # For displaying streak, directly use user.current_streak if last_cooked_date is recent
+        # The _recalculate_user_streak_and_last_cooked ensures user.current_streak is 0 if not recent
         today_perth = datetime.now(PERTH_TZ).date()
         if user.last_cooked_date:
             days_since_last_cook = (today_perth - user.last_cooked_date).days
-            if days_since_last_cook <= 1: 
+            if days_since_last_cook <= 1: # Cooked today or yesterday
                 streak_display_value = user.current_streak if user.current_streak is not None else 0
-            else: 
-                streak_display_value = 0
-        else: 
+            else: # Last cook was >1 day ago, streak should be 0 (already handled by recalculate)
+                streak_display_value = 0 # Or user.current_streak, which should be 0
+        else: # No cooking logs ever
             streak_display_value = 0
             
     else:
         flash("Error loading user data.", "warning")
+        streak_display_value = 0 # Safety
 
     stats = calculate_user_stats(user_id)
 
@@ -103,11 +144,8 @@ def start_cooking_session(recipe_id):
 @main.route('/log_cooking/<int:recipe_id>', methods=['POST'])
 @login_required
 def log_cooking_session(recipe_id):
-    # User is logging this for themselves, regardless of original recipe owner
-    # The recipe_id links to the Recipe they cooked, current_user.id is the logger.
     recipe = Recipe.query.get_or_404(recipe_id) 
     
-    # Permission check: user must own OR be whitelisted to log for this recipe.
     is_owner_of_original = (recipe.user_id == current_user.id)
     current_recipe_whitelist = recipe.whitelist if isinstance(recipe.whitelist, list) else []
     is_whitelisted_for_original = (current_user.id in current_recipe_whitelist)
@@ -130,7 +168,7 @@ def log_cooking_session(recipe_id):
                 return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
             try:
                 image_data = image_file.read()
-                if len(image_data) > 5 * 1024 * 1024:
+                if len(image_data) > 5 * 1024 * 1024: # Max 5MB
                     flash('Image file is too large (max 5MB).', 'danger')
                     return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
 
@@ -139,6 +177,7 @@ def log_cooking_session(recipe_id):
             except Exception as img_e:
                 print(f"Error processing log image: {img_e}")
                 flash('Could not process the uploaded image.', 'danger')
+                # Don't necessarily return, image is optional
 
         if not date_cooked_str:
              flash('Date cooked is required.', 'danger')
@@ -152,62 +191,26 @@ def log_cooking_session(recipe_id):
         duration_seconds = int(duration_str) if duration_str and duration_str.isdigit() else None
         rating = int(rating_str) if rating_str and rating_str.isdigit() and 1 <= int(rating_str) <= 5 else None
 
-        user = db.session.get(User, current_user.id)
-        if user.current_streak is None: 
-            user.current_streak = 0
-
-        original_last_cooked_date = user.last_cooked_date
-        
-        if original_last_cooked_date:
-            days_diff = (date_cooked - original_last_cooked_date).days
-            if days_diff == 1: 
-                user.current_streak += 1
-            elif days_diff > 1: 
-                user.current_streak = 1
-            elif days_diff <=0 and (user.current_streak == 0 or date_cooked < original_last_cooked_date) : 
-                all_logs_dates = sorted(list(set([log.date_cooked for log in CookingLog.query.filter_by(user_id=user.id).all()] + [date_cooked])))
-                if not all_logs_dates:
-                    user.current_streak = 0
-                else:
-                    current_recalculated_streak = 0
-                    if len(all_logs_dates) > 0:
-                        current_recalculated_streak = 1 
-                        for i in range(1, len(all_logs_dates)):
-                            if (all_logs_dates[i] - all_logs_dates[i-1]).days == 1:
-                                current_recalculated_streak += 1
-                            elif (all_logs_dates[i] - all_logs_dates[i-1]).days > 1: 
-                                current_recalculated_streak = 1 
-                    user.current_streak = current_recalculated_streak
-        else: 
-            user.current_streak = 1
-        
-        if user.last_cooked_date is None or date_cooked >= user.last_cooked_date:
-            user.last_cooked_date = date_cooked
-        
-        today_perth = datetime.now(PERTH_TZ).date()
-        if user.last_cooked_date: 
-            days_since_user_last_cook = (today_perth - user.last_cooked_date).days
-            if days_since_user_last_cook > 1: 
-                user.current_streak = 0 
-        else: 
-            user.current_streak = 0
-        
-        if user.current_streak < 0:
-            user.current_streak = 0
-
         new_log = CookingLog(
             user_id=current_user.id, recipe_id=recipe.id, date_cooked=date_cooked,
             duration_seconds=duration_seconds, rating=rating, notes=notes,
             image_url=log_image_url 
         )
-        db.session.add(new_log); db.session.add(user); db.session.commit()
+        db.session.add(new_log)
+        
+        # CORRECTED: Call the helper function to update streak and last_cooked_date
+        _recalculate_user_streak_and_last_cooked(current_user.id)
+        # The user object (current_user or fetched via db.session.get inside helper)
+        # will be added to the session by the helper.
+
+        db.session.commit()
         flash(f'Successfully logged your cooking session for "{recipe.name}"!', 'success')
         return redirect(url_for('main.home'))
 
     except Exception as e:
         db.session.rollback()
         print(f"ERROR logging cooking session: {e}")
-        flash(f'An error occurred while logging the cooking session: {e}', 'danger')
+        flash(f'An error occurred while logging the cooking session: {str(e)}', 'danger')
         return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
 
 # --- Edit Log Route ---
@@ -218,10 +221,11 @@ def edit_log(log_id):
 
     if log_entry.user_id != current_user.id:
         flash('You are not authorized to edit this log.', 'danger')
-        return redirect(url_for('main.view_logs'))
+        return redirect(url_for('main.view_logs')) # Or wherever appropriate
 
     if request.method == 'POST':
         try:
+            # ... (your existing form data processing for log_entry)
             date_cooked_str = request.form.get('date_cooked')
             duration_minutes_str = request.form.get('duration_minutes')
             rating_str = request.form.get('rating')
@@ -278,43 +282,18 @@ def edit_log(log_id):
                     flash('Could not process the new uploaded image.', 'danger')
             elif remove_current_image:
                 log_entry.image_url = None
-
+            
             log_entry.date_cooked = new_date_cooked
             log_entry.duration_seconds = new_duration_seconds
             log_entry.rating = new_rating
-            log_entry.notes = notes if notes else None 
+            log_entry.notes = notes if notes else None
+            # No need to db.session.add(log_entry) if it's already tracked by the session
+            
+            db.session.commit() # Commit changes to the log entry
 
-            db.session.commit() 
-
-            user = db.session.get(User, current_user.id)
-            if user.current_streak is None: user.current_streak = 0
-            all_user_log_dates = sorted(list(set(
-                [log.date_cooked for log in CookingLog.query.filter_by(user_id=user.id).all()]
-            )))
-            if not all_user_log_dates:
-                user.current_streak = 0
-                user.last_cooked_date = None
-            else:
-                recalculated_streak = 0
-                if len(all_user_log_dates) > 0:
-                    recalculated_streak = 1 
-                    for i in range(1, len(all_user_log_dates)):
-                        days_diff_recalc = (all_user_log_dates[i] - all_user_log_dates[i-1]).days
-                        if days_diff_recalc == 1:
-                            recalculated_streak += 1
-                        elif days_diff_recalc > 1: 
-                            recalculated_streak = 1 
-                user.current_streak = recalculated_streak
-                user.last_cooked_date = all_user_log_dates[-1]
-                today_perth = datetime.now(PERTH_TZ).date()
-                if user.last_cooked_date:
-                    days_since_last_actual_cook = (today_perth - user.last_cooked_date).days
-                    if days_since_last_actual_cook > 1:
-                        user.current_streak = 0
-                else:
-                    user.current_streak = 0
-            if user.current_streak < 0: user.current_streak = 0
-            db.session.commit()
+            # CORRECTED: Call the helper function after committing log changes
+            _recalculate_user_streak_and_last_cooked(current_user.id)
+            db.session.commit() # Commit changes to the user (streak, last_cooked_date)
 
             flash('Cooking log updated successfully!', 'success')
             return redirect(url_for('main.view_log_detail', log_id=log_entry.id)) 
@@ -323,9 +302,12 @@ def edit_log(log_id):
             db.session.rollback()
             print(f"Error updating log (ID: {log_id}): {e}")
             flash(f'An error occurred while updating the log: {str(e)}', 'danger')
-            return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
+            # No need to return render_template here if you redirect anyway or if error is severe
+            # but if it's a validation error you might want to re-render with the form.
+            # For simplicity now, just pass. The render is outside the try/except for POST.
 
     return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
+
 
 
 # --- API Routes ---
@@ -379,30 +361,27 @@ def delete_recipe_api(recipe_id):
         if recipe_to_delete.user_id != current_user.id:
              return jsonify({"error": "Unauthorized to delete this recipe"}), 403
 
-        # Find and delete all cooking logs associated with this recipe *by any user*.
-        # If you only want to delete logs by the recipe owner, add: .filter_by(user_id=current_user.id)
-        # However, generally, if a recipe is gone, its logs are less meaningful regardless of who logged them.
-        # This also handles logs from users who might have cloned/been whitelisted for the recipe.
-        # Be cautious with this behavior.
+        # Find and delete all cooking logs associated with this recipe.
         logs_to_delete = CookingLog.query.filter_by(recipe_id=recipe_to_delete.id).all()
         for log in logs_to_delete:
             db.session.delete(log)
         
-        # After deleting associated logs, delete the recipe itself
-        db.session.delete(recipe_to_delete)
-        
         # Also, remove any SharedRecipe entries related to this recipe_id
-        # to prevent dangling references in other users' mailboxes.
         shared_entries_to_delete = SharedRecipe.query.filter_by(recipe_id=recipe_to_delete.id).all()
         for shared_entry in shared_entries_to_delete:
             db.session.delete(shared_entry)
 
+        # After deleting associated items, delete the recipe itself
+        db.session.delete(recipe_to_delete)
         db.session.commit()
-        # Recalculate streaks for all users whose logs were deleted (if necessary and applicable)
-        # This can be complex. For now, we'll skip direct streak recalculation here for simplicity
-        # as logs are deleted, but a more robust system might trigger this.
-        # The user deleting the recipe will have their streak updated naturally on next log or edit.
         
+        # Recalculate streak for the current user if any of their logs were deleted
+        # This is important if deleting a recipe also deletes logs that affected their streak.
+        # If logs_to_delete contained any logs by current_user:
+        if any(log.user_id == current_user.id for log in logs_to_delete):
+            _recalculate_user_streak_and_last_cooked(current_user.id)
+            db.session.commit()
+
         return jsonify({"message": "Recipe and all associated cooking logs deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()

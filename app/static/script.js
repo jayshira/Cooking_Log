@@ -48,18 +48,54 @@ async function fetchApi(url, options = {}) {
 // const recipes = await fetchApi('/api/recipes');
 // const newRecipe = await fetchApi('/api/recipes', { method: 'POST', ... });
 
-function showTemporaryStatusMessage(message, type = 'info') {
+// static/script.js
+function showTemporaryStatusMessage(message, type = 'info', duration = 3000) {
     const statusDiv = document.createElement('div');
-    statusDiv.className = `alert alert-${type}`; // Use existing alert styles
+    statusDiv.className = `alert alert-${type}`;
     statusDiv.textContent = message;
-    // Style for fixed position at top-center
-    statusDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1050; ...';
+    
+    // Base styles
+    statusDiv.style.position = 'fixed';
+    statusDiv.style.top = '20px';
+    statusDiv.style.left = '50%';
+    statusDiv.style.transform = 'translateX(-50%)';
+    statusDiv.style.zIndex = '1050';
+    statusDiv.style.padding = '10px 20px'; // Ensure padding
+    statusDiv.style.borderRadius = '5px'; // Ensure border-radius
+    statusDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)'; // Add some shadow
+    statusDiv.style.opacity = '1';
+    statusDiv.style.transition = 'opacity 0.5s ease-out'; // For fade-out
+
+    // Apply alert-specific styles if not already covered by global .alert classes
+    // This ensures the background and text colors are set correctly if .alert-{type} isn't globally sufficient
+    switch (type) {
+        case 'success':
+            statusDiv.style.backgroundColor = 'var(--success-bg)'; statusDiv.style.color = 'var(--success-text)'; statusDiv.style.borderColor = 'var(--success-border)';
+            break;
+        case 'warning':
+            statusDiv.style.backgroundColor = 'var(--warning-bg)'; statusDiv.style.color = 'var(--warning-text)'; statusDiv.style.borderColor = 'var(--warning-border)';
+            break;
+        case 'danger':
+            statusDiv.style.backgroundColor = 'var(--danger-bg)'; statusDiv.style.color = 'var(--danger-text)'; statusDiv.style.borderColor = 'var(--danger-border)';
+            break;
+        case 'info':
+        default:
+            statusDiv.style.backgroundColor = 'var(--info-bg)'; statusDiv.style.color = 'var(--info-text)'; statusDiv.style.borderColor = 'var(--info-border)';
+            break;
+    }
+    
     document.body.appendChild(statusDiv);
-    // Remove after a delay
-    setTimeout(() => { /* ... fade out and remove ... */ }, 3000);
+
+    setTimeout(() => {
+        statusDiv.style.opacity = '0'; // Start fade-out
+        // Remove from DOM after transition completes
+        setTimeout(() => {
+            if (statusDiv.parentNode) {
+                statusDiv.parentNode.removeChild(statusDiv);
+            }
+        }, 500); // Match transition duration
+    }, duration);
 }
-// Example usage:
-// postSaveActions(savedRecipe, ...) { if (savedRecipe) { showTemporaryStatusMessage("Recipe saved!", "success"); } }
 
 
 function copyRecipeLink() {
@@ -484,63 +520,44 @@ async function saveRecipe(recipeData, isEditing, submitButton) {
 }
 
 function postSaveActions(savedRecipe, submitButton) {
+    const wasEditing = document.getElementById('recipe-form').dataset.editingId; // Check *before* deleting
+
     submitButton.disabled = false;
-    submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+    // After an add or update, the form resets to "Add Recipe" mode.
+    submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe'; 
     
     if (savedRecipe) {
         document.getElementById('recipe-form').reset();
-        delete document.getElementById('recipe-form').dataset.editingId;
+        // Clear the image file input and its status specifically
+        const imageInput = document.getElementById('recipe-image');
+        if (imageInput) imageInput.value = ''; 
+        const fileUploadStatus = document.getElementById('file-upload-status');
+        if (fileUploadStatus) {
+            fileUploadStatus.textContent = '';
+            fileUploadStatus.className = '';
+        }
+
+        if (wasEditing) { // If it was an edit, clear the editing state
+            delete document.getElementById('recipe-form').dataset.editingId;
+        }
         
         // Remove cancel button if it exists
         const cancelBtn = document.getElementById('cancel-edit-btn');
         if (cancelBtn) cancelBtn.remove();
         
-        // Reset form header
+        // Reset form header to "Add New Recipe"
         document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
         
-        // Clear file upload status
-        const fileUploadStatus = document.getElementById('file-upload-status');
-        if (fileUploadStatus) {
-            fileUploadStatus.textContent = '';
-            fileUploadStatus.className = '';
-        }
+        loadRecipes(); // Reload recipes to show changes
+        switchTab('my-recipes'); // Switch to the recipes list tab
         
-        // Reload recipes and switch tab
-        loadRecipes();
-        switchTab('my-recipes');
         showTemporaryStatusMessage(
-            `Recipe "${savedRecipe.name}" ${submitButton.innerHTML.includes('Update') ? 'updated' : 'saved'} successfully!`, 
+            `Recipe "${savedRecipe.name}" ${wasEditing ? 'updated' : 'saved'} successfully!`, 
             'success'
         );
     }
 }
 
-// Actions to take after trying to save a recipe
-function postSaveActions(savedRecipe, submitButton) {
-     submitButton.disabled = false;
-     submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe'; // Reset button text/icon
-
-    if (savedRecipe) {
-        document.getElementById('recipe-form').reset();
-        const fileUploadStatus = document.getElementById('file-upload-status');
-        document.getElementById('recipe-image').value = '';
-        if (fileUploadStatus) {
-            fileUploadStatus.textContent = '';
-            fileUploadStatus.className = '';
-        }
-
-        // Reload recipes which now includes the new one
-        loadRecipes();
-        // Switch to the 'My Recipes' tab to show the new card
-        switchTab('my-recipes'); // Use the new tab ID
-        // Give specific success feedback
-        // Flash message will appear on reload/redirect if backend sends one,
-        // but an alert gives immediate feedback here.
-        alert(`Recipe "${savedRecipe.name}" saved successfully!`);
-    } else {
-        // Error alerts handled within addRecipeToServer
-    }
-}
 
 // Delete recipe function (called by button)
 async function deleteRecipe(id) {
@@ -729,7 +746,6 @@ function updateStats() {
     // Use the global LOG_STATS_DATA parsed from the template
     const stats = LOG_STATS_DATA;
 
-    // Update the stat display elements
     const totalSessionsEl = document.getElementById('total-sessions');
     const mostFrequentRecipeEl = document.getElementById('most-frequent-recipe');
     const mostFrequentCountEl = document.getElementById('most-frequent-count');
@@ -738,8 +754,7 @@ function updateStats() {
 
     if (totalSessionsEl) totalSessionsEl.textContent = stats.total_sessions || 0;
 
-        if (mostFrequentRecipeEl) {
-        // CORRECTED ACCESS:
+    if (mostFrequentRecipeEl) {
         if (stats.most_frequent_recipe && stats.most_frequent_recipe.name && stats.most_frequent_recipe.name !== '-' && stats.most_frequent_recipe.count > 0) {
             mostFrequentRecipeEl.textContent = stats.most_frequent_recipe.name; // Access .name
             if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe.count} logs)`; // Access .count
@@ -765,11 +780,11 @@ function updateStats() {
     }
 
     // Update the charts using the data from LOG_STATS_DATA
-    if (document.getElementById('top-recipes-chart')) {
-        updateTopRecipesChart(stats.top_recipes_data || []);
+    if (document.getElementById('top-recipes-chart') && stats.top_recipes_data) {
+        updateTopRecipesChart(stats.top_recipes_data);
     }
-    if (document.getElementById('frequency-chart')) {
-        updateMonthlyFrequencyChart(stats.monthly_frequency_data || []);
+    if (document.getElementById('frequency-chart') && stats.monthly_frequency_data) {
+        updateMonthlyFrequencyChart(stats.monthly_frequency_data);
     }
 }
 
