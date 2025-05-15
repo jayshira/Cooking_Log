@@ -1114,31 +1114,72 @@ async function fetchSharedRecipes() {
     }
 }
 
+async function fetchSharedRecipes() {
+    try {
+        const response = await fetch('/api/shared_recipes/my');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching shared recipes:", error);
+        return [];
+    }
+}
+
 function displaySharedRecipes() {
     const sharedRecipesList = document.getElementById('shared-recipes-list');
     const noRecipesMessage = document.getElementById('no-recipes-message');
 
+    // Show loading state
+    sharedRecipesList.innerHTML = '<p class="loading-message" style="text-align: center; padding: 20px; color: var(--grey);"><i class="fas fa-spinner fa-spin"></i> Loading shared recipes...</p>';
+    noRecipesMessage.style.display = 'none'; // Hide no recipes message while loading
+
     fetchSharedRecipes().then(shared_recipes => {
+        sharedRecipesList.innerHTML = ''; // Clear loading message
+
         if (shared_recipes.length === 0) {
             noRecipesMessage.style.display = 'block';
-            sharedRecipesList.style.display = 'none';
+            // sharedRecipesList remains empty if no recipes
         } else {
             noRecipesMessage.style.display = 'none';
-            sharedRecipesList.style.display = 'block';
             
-            sharedRecipesList.innerHTML = '';
             shared_recipes.forEach(shared_recipe => {
-                const li = document.createElement('li');
-                li.textContent = `${shared_recipe.recipe_name} - Shared by ${shared_recipe.sharer_name} on ${shared_recipe.date_shared.split('T')[0]}`;
-                li.addEventListener('click', () => {
-                    window.open(`./view_recipe/${shared_recipe.recipe_id}`, '_blank');
-                    // Add your recipe viewing logic here
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shared-recipe-item';
+                
+                // Format date for better readability
+                const dateShared = new Date(shared_recipe.date_shared);
+                const formattedDate = dateShared.toLocaleDateString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric'
                 });
-                sharedRecipesList.appendChild(li);
+
+                itemDiv.innerHTML = `
+                    <div class="shared-recipe-icon">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <div class="shared-recipe-details">
+                        <h4 class="shared-recipe-name">${shared_recipe.recipe_name}</h4>
+                        <p class="shared-recipe-meta">
+                            Shared by <strong>${shared_recipe.sharer_name}</strong> on ${formattedDate}
+                        </p>
+                    </div>
+                    <div class="shared-recipe-action">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                `;
+                
+                itemDiv.addEventListener('click', () => {
+                    window.open(`./view_recipe/${shared_recipe.recipe_id}`, '_blank');
+                });
+                sharedRecipesList.appendChild(itemDiv);
             });
         }
     }).catch(error => {
         console.error('Error fetching shared recipes:', error);
+        sharedRecipesList.innerHTML = ''; // Clear loading message on error
+        noRecipesMessage.textContent = 'Could not load shared recipes.';
+        noRecipesMessage.style.display = 'block';
     });
 }
 
