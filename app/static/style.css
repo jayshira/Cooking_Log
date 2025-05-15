@@ -203,6 +203,10 @@ label[for="remember"] { /* Specific style for Remember Me */
     font-weight: normal;
     vertical-align: middle;
 }
+label[for="share-recipe"] {
+  margin-top: 20px;
+  font-size: 1.05rem;
+}
 
 input[type="text"],
 input[type="number"],
@@ -645,33 +649,6 @@ body > .custom-alert {
     margin-top: 20px;
     background-color: #fafafa; /* Slightly different background */
 }
-#share-preview .recipe-card {
-    max-width: 100%; /* Allow full width */
-    margin-bottom: 20px;
-    box-shadow: none;
-    border: none;
-    background: none; /* Transparent background inside preview */
-    padding: 0;
-}
-#share-preview .recipe-img {
-    height: 150px; /* Smaller preview image */
-    border-radius: 5px 5px 0 0; /* Rounded top corners */
-}
-#share-preview .recipe-info {
-    padding: 15px 0 0 0;
-}
-#share-preview .recipe-title {
-    font-size: 1.1rem;
-    margin-bottom: 5px;
-}
-#share-preview .recipe-meta {
-    font-size: 0.85rem;
-    margin-bottom: 15px;
-}
-#share-preview h4 {
-    margin-bottom: 15px;
-    font-size: 1rem;
-}
 #share-preview p {
     margin-bottom: 10px;
     font-weight: 600;
@@ -705,6 +682,75 @@ body > .custom-alert {
 }
 .dropdown li:hover {
     background: #eee;
+}
+
+/* --- Share page --- */
+.share-card {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.preview-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 6px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--light-color);
+}
+
+.preview-info h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+}
+.preview-info p {
+  margin: 5px 0;
+  font-size: 0.9rem;
+  color: var(--grey);
+}
+
+.share-section {
+  margin-bottom: 20px;
+}
+.share-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.share-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#user-search {
+  flex: 2;
+  min-width: 200px;
+  padding: 10px;
+}
+#add-to-whitelist-btn {
+  flex: 1;
+  min-width: 140px;
+}
+.recipe-meta .fas, 
+.preview-info .fas {
+  font-size: 0.85em;
+  width: 1em;
+  text-align: center;
+}
+.category-icon {
+  color: var(--accent-color);
+}
+.time-icon {
+  color: var(--secondary-color);
 }
 
 /* Popup styles */

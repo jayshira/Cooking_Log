@@ -200,43 +200,52 @@
           </div>
          <!-- **** END MODIFIED Recipe Stats Tab **** -->
 
-        <!-- Share Tab (Keep as is) -->
+        <!-- Share Tab -->
         <div id="share" class="tab-content">
             <div class="card">
                 <h2><i class="fas fa-share-alt"></i> Share Your Recipes</h2>
                 <p>Select one of your recipes to generate sharing links.</p>
+
                 <div class="form-group">
-                    <label for="share-recipe">Choose Recipe</label>
-                    <select id="share-recipe"><option value="">Select a recipe</option></select>
-                    <input type="hidden" id="selected-user-id">
+                <label for="share-recipe">Choose Recipe</label>
+                <select id="share-recipe">
+                    <option value="">Select a recipe</option>
+                </select>
                 </div>
+
                 <div id="share-preview" style="display: none;">
-                    <!-- Share Preview content remains the same -->
-                    <div class="recipe-card" style="max-width: 400px; margin-bottom: 20px;">
-                        <div class="recipe-img" id="share-image"></div>
-                        <div class="recipe-info">
-                            <h3 class="recipe-title" id="share-title"></h3>
-                            <div class="recipe-meta">
-                                <span id="share-category"></span>
-                                <span id="share-time"></span>
-                            </div>
-                        </div>
+                <!-- Preview -->
+                <div class="share-card">
+                    <div class="preview-img" id="share-image"></div>
+                    <div class="preview-info">
+                    <h3 id="share-title"></h3>
+                    <p id="share-category"></p>
+                    <p id="share-time"></p>
                     </div>
-                    <p style="margin-bottom: 15px;">Share via:</p>
+                </div>
+
+                <!-- Share via sns -->
+                <div class="share-section">
+                    <p class="share-label">Share via:</p>
                     <div class="share-options">
-                        <button class="share-btn facebook" onclick="shareRecipe('facebook')"><i class="fab fa-facebook-f"></i> Facebook</button>
-                        <button class="share-btn twitter" onclick="shareRecipe('twitter')"><i class="fab fa-twitter"></i> Twitter</button>
-                        <button class="share-btn whatsapp" onclick="shareRecipe('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                        <button class="share-btn email" onclick="shareRecipe('email')"><i class="fas fa-envelope"></i> Email</button>
+                    <button class="share-btn facebook" onclick="shareRecipe('facebook')"><i class="fab fa-facebook-f"></i> Facebook</button>
+                    <button class="share-btn twitter" onclick="shareRecipe('twitter')"><i class="fab fa-twitter"></i> Twitter</button>
+                    <button class="share-btn whatsapp" onclick="shareRecipe('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                    <button class="share-btn email" onclick="shareRecipe('email')"><i class="fas fa-envelope"></i> Email</button>
                     </div>
-                    <div id="response-message"></div>
-                    <button id="add-to-whitelist-btn">Add to Whitelist</button>
-                    <input type="text" id="user-search" placeholder="Search users..." autocomplete="off"> 
+                </div>
+
+                <!-- Share to user -->
+                <div class="share-to-user">
+                    <p class="share-label">Share to user:</p>
+                    <div class="share-actions">
+                        <input type="text" id="user-search" placeholder="Search users..." autocomplete="off">
+                        <button id="add-to-whitelist-btn" class="btn btn-secondary btn-sm">Add to Whitelist</button>
+                    </div>
                     <ul id="suggestions" class="dropdown"></ul>
+                    <div id="response-message"></div>
                 </div>
             </div>
-        </div>
-    </div>
 
     <!-- Mailbox Popup -->
     <div id="mailbox-popup" class="mailbox-popup">
