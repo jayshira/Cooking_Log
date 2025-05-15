@@ -829,6 +829,48 @@ footer {
     background-color: #f0f0f0;
 }
 
+
+/* Logs Table Styles */
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.logs-table th, .logs-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--light-grey);
+}
+
+.logs-table th {
+    background-color: var(--bg-light);
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.logs-table tr:hover {
+    background-color: rgba(255, 123, 84, 0.05);
+}
+
+.filter-controls {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+    .logs-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+}
 /* --- Responsive Design --- */
 @media (max-width: 992px) { /* Tablets */
     .stats-grid {
