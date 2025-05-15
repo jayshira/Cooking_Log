@@ -674,7 +674,8 @@ body > .custom-alert {
     background: white;
     max-height: 200px;
     overflow-y: auto;
-    width: 200px;
+    width: 100%;
+    z-index: 10;
 }
 .dropdown li {
     padding: 8px;

@@ -239,13 +239,13 @@
                 <div class="share-to-user">
                     <p class="share-label">Share to user:</p>
                     <div class="share-actions">
-                        <input type="text" id="user-search" placeholder="Search users..." autocomplete="off">
+                        <div style="position: relative; flex: 2; with: 100%;">
+                            <input type="text" id="user-search" placeholder="Search users..." autocomplete="off">
+                            <ul id="suggestions" class="dropdown"></ul>
+                        </div>
                         <button id="add-to-whitelist-btn" class="btn btn-secondary btn-sm">Add to Whitelist</button>
                     </div>
-                    <ul id="suggestions" class="dropdown"></ul>
-                    <div id="response-message"></div>
                 </div>
-            </div>
 
     <!-- Mailbox Popup -->
     <div id="mailbox-popup" class="mailbox-popup">
