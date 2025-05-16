@@ -10,6 +10,7 @@ let chartStates = {
     'top-rated': 'all-time'
 };
 let currentRecipes = []; // Cache recipes locally for search/share dropdowns
+let ingredients = []; // For dynamic ingredient input
 
 // --- API Helper Functions ---
 
@@ -39,7 +40,6 @@ async function fetchRecipes() {
         return recipes;
     } catch (error) {
         console.error("fetchRecipes: CATCH BLOCK - Error fetching recipes:", error.message, error.stack);
-        // alert(`Failed to load your recipes. ${error.message}. Check console for details.`);
         currentRecipes = []; // Reset global cache on error
         return []; // Return empty array so UI can show "no recipes" or "error"
     }
@@ -57,9 +57,9 @@ async function fetchApi(url, options = {}) {
                 errorMessage = await response.text() || `Status ${response.status}`;
             }
             console.error(`fetchApi: HTTP error! Status: ${response.status}, URL: ${url}, Message: ${errorMessage}`);
-            if (response.status === 401 && (options.method !== 'GET' || url !== '/api/recipes')) { // Avoid double alert from fetchRecipes
+            if (response.status === 401 && (options.method !== 'GET' || url !== '/api/recipes')) { 
                  alert("Your session may have expired or you are unauthorized. Please log in again.");
-                 window.location.href = '/auth/login'; // Corrected login URL
+                 window.location.href = '/auth/login'; 
             }
             throw new Error(`HTTP error! Status: ${response.status} - ${errorMessage}`);
         }
@@ -71,7 +71,7 @@ async function fetchApi(url, options = {}) {
         return await response.text();
     } catch (error) {
         console.error(`API Error (${options.method || 'GET'} ${url}):`, error);
-        throw error; // Rethrow for specific handling
+        throw error; 
     }
 }
 
@@ -120,7 +120,7 @@ function showTemporaryStatusMessage(message, type = 'info', duration = 3000) {
 }
 
 
-function copyRecipeLink() { // This function seems unused in current home.html, but kept if needed elsewhere
+function copyRecipeLink() { 
     const linkInput = document.getElementById('recipe-share-link');
     if (!linkInput || !linkInput.value) {
         showTemporaryStatusMessage('No recipe link available to copy.', 'warning');
@@ -219,9 +219,9 @@ function renderRecipeCard(recipe) {
         recipeCard.className = 'recipe-card';
         recipeCard.dataset.id = recipe.id;
 
-        const ingredients = recipe.ingredients || [];
-        const ingredientsPreview = (Array.isArray(ingredients) ? ingredients : [])
-            .slice(0, 4).join(', ') + (ingredients.length > 4 ? '...' : '');
+        const ingredientsArray = recipe.ingredients || []; // Ensure it's an array
+        const ingredientsPreview = (Array.isArray(ingredientsArray) ? ingredientsArray : [])
+            .slice(0, 4).join(', ') + (ingredientsArray.length > 4 ? '...' : '');
         
         const imageStyle = recipe.image
             ? `background-image: url(${encodeURI(recipe.image)});`
@@ -296,11 +296,11 @@ async function loadRecipes() {
     }
 
 
-    let recipes = [];
+    let recipesData = [];
     try {
         console.log("loadRecipes: Awaiting fetchRecipes()...");
-        recipes = await fetchRecipes(); 
-        console.log("loadRecipes: fetchRecipes() completed. Recipes count:", recipes.length);
+        recipesData = await fetchRecipes(); 
+        console.log("loadRecipes: fetchRecipes() completed. Recipes count:", recipesData.length);
     } catch (error) { 
         console.error("loadRecipes: CATCH BLOCK - Error awaiting fetchRecipes():", error);
         recipeList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--danger-text);">An error occurred while loading recipes. Please check the console and try refreshing.</p>';
@@ -315,9 +315,9 @@ async function loadRecipes() {
 
     if (shareRecipeSelect) {
         shareRecipeSelect.innerHTML = '<option value="">Select a recipe to share</option>';
-        if (recipes.length > 0) {
+        if (recipesData.length > 0) {
             let hasOwnedRecipes = false;
-            recipes.forEach(recipe => {
+            recipesData.forEach(recipe => {
                 if (typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID) {
                     const option = document.createElement('option');
                     option.value = recipe.id;
@@ -332,14 +332,14 @@ async function loadRecipes() {
         }
     }
 
-    if (recipes.length === 0) {
+    if (recipesData.length === 0) {
         console.log("loadRecipes: No recipes to display.");
         if (!recipeList.textContent.toLowerCase().includes("error")) {
              recipeList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--grey);">You haven\'t added any recipes yet. Use the "Add Recipe" tab!</p>';
         }
     } else {
         console.log("loadRecipes: Rendering recipe cards...");
-        recipes.forEach(recipe => {
+        recipesData.forEach(recipe => {
             try {
                 const recipeCard = renderRecipeCard(recipe); 
                 recipeList.appendChild(recipeCard);
@@ -398,26 +398,24 @@ async function handleFormSubmit(event) {
     const name = document.getElementById('recipe-name').value.trim();
     const category = document.getElementById('recipe-category').value;
     const timeInput = document.getElementById('recipe-time').value;
-    const ingredientsText = document.getElementById('recipe-ingredients').value.trim();
     const instructions = document.getElementById('recipe-instructions').value.trim();
     const imageInput = document.getElementById('recipe-image');
+    
+    // Get ingredients from the dynamic list
+    const ingredientsList = Array.from(
+        document.querySelectorAll('#ingredient-list li span')
+    ).map(span => span.textContent.trim()).filter(i => i);
 
-    if (!name || !category || !timeInput || !ingredientsText || !instructions) {
+
+    if (!name || !category || !timeInput || ingredientsList.length === 0 || !instructions) {
         alert('Please fill in all required fields: Name, Category, Time, Ingredients, and Instructions.');
-        console.warn("handleFormSubmit: Validation failed - missing fields.");
+        console.warn("handleFormSubmit: Validation failed - missing fields or no ingredients.");
         return;
     }
     const time = parseInt(timeInput, 10);
     if (isNaN(time) || time <= 0) {
         alert('Please enter a valid time (must be a number greater than 0).');
         console.warn("handleFormSubmit: Validation failed - invalid time.");
-        return;
-    }
-
-    const ingredientsList = ingredientsText.split(/[\n,]+/).map(i => i.trim()).filter(i => i);
-    if (ingredientsList.length === 0) {
-        alert('Please list at least one ingredient.');
-        console.warn("handleFormSubmit: Validation failed - no ingredients.");
         return;
     }
 
@@ -462,6 +460,12 @@ async function handleFormSubmit(event) {
         }
     } else {
         console.log("handleFormSubmit: No new image selected.");
+        if (isEditing) { // If editing and no new image, keep existing image
+            const existingRecipe = currentRecipes.find(r => r.id == isEditing);
+            if (existingRecipe && existingRecipe.image) {
+                recipeData.image = existingRecipe.image;
+            }
+        }
     }
     
     await saveRecipe(recipeData, isEditing, submitButton);
@@ -510,13 +514,14 @@ async function saveRecipe(recipeData, isEditing, submitButton) {
 
 function postSaveActions(savedRecipe, submitButton, wasEditing) {
     submitButton.disabled = false;
-    submitButton.innerHTML = wasEditing ? 
-        '<i class="fas fa-save"></i> Update Recipe' : 
-        '<i class="fas fa-save"></i> Save Recipe';
+    // The text on submitButton is now managed in editRecipe and cancelEdit for clarity
     
     if (savedRecipe) {
         console.log(`postSaveActions: Recipe "${savedRecipe.name}" ${wasEditing ? 'updated' : 'saved'} successfully.`);
         document.getElementById('recipe-form').reset();
+        ingredients = []; // Clear ingredients array
+        renderList(); // Clear ingredient list UI
+        
         const imageInput = document.getElementById('recipe-image');
         if (imageInput) imageInput.value = ''; 
         const fileUploadStatus = document.getElementById('file-upload-status');
@@ -529,11 +534,16 @@ function postSaveActions(savedRecipe, submitButton, wasEditing) {
             delete document.getElementById('recipe-form').dataset.editingId;
         }
         
-        const cancelBtn = document.getElementById('cancel-edit-btn');
-        if (cancelBtn) cancelBtn.remove();
-        
+        // Reset button and title to "Add" mode
         document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
         submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+        const addRecipeTabButton = document.querySelector('.tab[data-tab="add"]');
+        if(addRecipeTabButton) addRecipeTabButton.textContent = 'Add Recipe';
+
+
+        const cancelBtn = document.getElementById('cancel-edit-btn');
+        if (cancelBtn) cancelBtn.remove();
+        removeTabSwitchCancelListeners();
         
         loadRecipes(); 
         switchTab('my-recipes');
@@ -544,6 +554,12 @@ function postSaveActions(savedRecipe, submitButton, wasEditing) {
         );
     } else {
         console.warn("postSaveActions: saveRecipe resulted in no savedRecipe object (likely an error).");
+        // If error, ensure button text is appropriate for current mode (Add or Update)
+        if (document.getElementById('recipe-form').dataset.editingId) {
+            submitButton.innerHTML = '<i class="fas fa-save"></i> Update Recipe';
+        } else {
+            submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+        }
     }
 }
 
@@ -576,13 +592,17 @@ function editRecipe(id) {
         return;
     }
 
+    switchTab('add'); // Switch to the add tab first
+
     document.getElementById('recipe-name').value = recipe.name;
     document.getElementById('recipe-category').value = recipe.category;
     document.getElementById('recipe-time').value = recipe.time;
-    document.getElementById('recipe-ingredients').value = Array.isArray(recipe.ingredients) ? 
-        recipe.ingredients.join('\n') : (recipe.ingredients || '');
     document.getElementById('recipe-instructions').value = recipe.instructions || '';
     
+    // Populate ingredients
+    ingredients = Array.isArray(recipe.ingredients) ? [...recipe.ingredients] : [];
+    renderList(); // Render the ingredients in the dynamic list
+
     const imageInput = document.getElementById('recipe-image');
     if (imageInput) imageInput.value = ''; 
     const fileUploadStatus = document.getElementById('file-upload-status');
@@ -591,24 +611,28 @@ function editRecipe(id) {
         fileUploadStatus.className = recipe.image ? 'info' : '';
     }
 
-
     document.getElementById('recipe-form').dataset.editingId = id;
 
+    // Update form header and button text
     document.querySelector('#add h2').innerHTML = '<i class="fas fa-edit"></i> Edit Recipe';
-    document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Update Recipe';
+    const submitButton = document.querySelector('#add button[type="submit"]');
+    submitButton.innerHTML = '<i class="fas fa-save"></i> Update Recipe';
 
+    const addRecipeTabButton = document.querySelector('.tab[data-tab="add"]');
+    if(addRecipeTabButton) addRecipeTabButton.textContent = 'Edit Recipe';
+
+
+    // Add cancel button if it doesn't exist
     if (!document.getElementById('cancel-edit-btn')) {
-        const submitBtn = document.querySelector('#add button[type="submit"]');
         const cancelBtn = document.createElement('button');
         cancelBtn.type = 'button';
         cancelBtn.id = 'cancel-edit-btn';
         cancelBtn.className = 'btn btn-secondary';
-        cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancel';
+        cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancel Edit';
         cancelBtn.onclick = cancelEdit;
-        submitBtn.insertAdjacentElement('afterend', cancelBtn);
+        submitButton.insertAdjacentElement('afterend', cancelBtn);
     }
-
-    switchTab('add');
+    addTabSwitchCancelListeners();
     document.getElementById('recipe-name').focus(); 
 }
 
@@ -617,12 +641,22 @@ function cancelEdit() {
     const form = document.getElementById('recipe-form');
     delete form.dataset.editingId;
     form.reset();
+    
+    ingredients = []; // Clear ingredients array
+    renderList(); // Clear ingredient list UI
 
+    // Reset form header and button text to "Add" mode
     document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
     document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+    
+    const addRecipeTabButton = document.querySelector('.tab[data-tab="add"]');
+    if(addRecipeTabButton) addRecipeTabButton.textContent = 'Add Recipe';
+
 
     const cancelBtn = document.getElementById('cancel-edit-btn');
     if (cancelBtn) cancelBtn.remove();
+    removeTabSwitchCancelListeners();
+
 
     const fileUploadStatus = document.getElementById('file-upload-status');
     if (fileUploadStatus) {
@@ -633,6 +667,35 @@ function cancelEdit() {
     if (imageInput) imageInput.value = '';
     switchTab('my-recipes'); 
 }
+
+// Helper functions to manage tab switch listeners for cancelEdit
+function addTabSwitchCancelListeners() {
+    document.querySelectorAll('.tab:not([data-tab="add"])').forEach(tab => {
+        tab.addEventListener('click', cancelEditOnTabSwitch);
+    });
+}
+function removeTabSwitchCancelListeners() {
+     document.querySelectorAll('.tab:not([data-tab="add"])').forEach(tab => {
+        tab.removeEventListener('click', cancelEditOnTabSwitch);
+    });
+}
+function cancelEditOnTabSwitch(event) {
+    // Only cancel if we are currently in edit mode on the 'add' tab
+    if (document.getElementById('recipe-form').dataset.editingId && 
+        document.querySelector('.tab[data-tab="add"]').classList.contains('active')) {
+        
+        // Prevent immediate tab switch if user cancels the "cancel edit" confirmation
+        if (confirm("You have unsaved changes. Are you sure you want to leave the edit form?")) {
+            cancelEdit();
+            // The original click event on the tab will proceed after this.
+        } else {
+            event.stopImmediatePropagation(); // Stop the tab switch
+            return; // Keep the user on the edit form
+        }
+    }
+    // If not in edit mode or not on the add tab, do nothing extra, let switchTab handle it.
+}
+
 
 const originalAlert = window.alert;
 window.alert = function(message, buttonsHTML) { 
@@ -737,7 +800,7 @@ function displaySharePreview(recipeId) {
         if (addToWhitelistBtn) addToWhitelistBtn.disabled = !isOwner;
         if (responseMessage) {
             responseMessage.textContent = isOwner ? '' : 'You can only manage sharing for your own recipes.';
-            responseMessage.className = isOwner ? '' : 'info'; // Use 'info' class for non-owner message
+            responseMessage.className = isOwner ? '' : 'info'; 
         }
 
     } else {
@@ -864,11 +927,6 @@ function updateStats() {
         chartStates['frequency'] = 'monthly'; 
         const freqTitle = document.getElementById('frequency-title');
         if (freqTitle) freqTitle.textContent = 'Monthly Cooking Frequency';
-        
-        // Ensure toggleChart function can find the button via its parent event listener.
-        // The button itself is in home.html:
-        // <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart(event, 'frequency')">
-        // So, it should be fine.
     }
 }
 
@@ -965,10 +1023,10 @@ function updateMonthlyFrequencyChart(frequencyData) {
     });
 }
 
-function updateTimeChart(recipes) { 
+function updateTimeChart(recipesData) { 
     const ctx = document.getElementById('time-chart')?.getContext('2d');
     if (!ctx) return; 
-    if (!recipes) recipes = [];
+    if (!recipesData) recipesData = [];
 }
 
 function updateWeeklyFrequencyChart(weeklyData) {
@@ -1048,13 +1106,35 @@ function switchTab(tabId) {
     const targetTabContent = document.getElementById(tabId);
     
     if (targetTabButton && targetTabContent) {
+        // Deactivate all tabs and content
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Activate the target tab and content
         targetTabButton.classList.add('active');
         targetTabContent.classList.add('active');
+
+        // Special actions for specific tabs
         if (tabId === 'recipe-stats' && typeof LOG_STATS_DATA !== 'undefined') {
             console.log("switchTab: Stats tab activated, calling updateStats().");
             updateStats();
+        } else if (tabId === 'add') {
+            // If not editing, reset the form to "Add New Recipe" mode
+            const form = document.getElementById('recipe-form');
+            if (!form.dataset.editingId) {
+                form.reset();
+                ingredients = [];
+                renderList();
+                document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
+                document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+                const addRecipeTabButton = document.querySelector('.tab[data-tab="add"]');
+                if(addRecipeTabButton) addRecipeTabButton.textContent = 'Add Recipe';
+
+
+                const cancelBtn = document.getElementById('cancel-edit-btn');
+                if (cancelBtn) cancelBtn.remove();
+                removeTabSwitchCancelListeners();
+            }
         }
     } else {
         console.warn(`switchTab: Could not switch to tab. Button or content not found for tabId "${tabId}"`);
@@ -1226,7 +1306,6 @@ function displaySharedRecipes() {
                 const dateShared = new Date(shared_recipe.date_shared);
                 const formattedDate = dateShared.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
-                // Determine profile image or default icon
                 let sharerImageHTML;
                 if (shared_recipe.sharer_profile_image_url) {
                     sharerImageHTML = `<img src="${shared_recipe.sharer_profile_image_url}" alt="${shared_recipe.sharer_name}" class="shared-recipe-sharer-avatar">`;
@@ -1245,7 +1324,6 @@ function displaySharedRecipes() {
                     <div class="shared-recipe-action"><i class="fas fa-chevron-right"></i></div>`;
                 
                 itemDiv.addEventListener('click', () => {
-                    // Link to view_recipe page (already correct)
                     window.location.href = `/view_recipe/${shared_recipe.recipe_id}`;
                 });
                 sharedRecipesList.appendChild(itemDiv);
@@ -1262,9 +1340,10 @@ function displaySharedRecipes() {
 }
 
 
-// --- Whitelist Management Functions (New) ---
+// --- Whitelist Management Functions ---
 async function searchUsers(query) {
     const suggestionsList = document.getElementById('suggestions');
+    if (!suggestionsList) return;
     if (query.length < 1) { 
         suggestionsList.innerHTML = '';
         suggestionsList.style.display = 'none';
@@ -1286,7 +1365,7 @@ async function searchUsers(query) {
             });
             suggestionsList.style.display = 'block';
         } else {
-            suggestionsList.innerHTML = '<li>No users found</li>'; // Indicate no users
+            suggestionsList.innerHTML = '<li>No users found</li>'; 
             suggestionsList.style.display = 'block';
         }
     } catch (error) {
@@ -1301,6 +1380,8 @@ async function handleAddToWhitelist() {
     const usernameToWhitelist = document.getElementById('user-search').value.trim();
     const responseMessageDiv = document.getElementById('response-message');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (!responseMessageDiv) return;
 
     if (!recipeId) {
         responseMessageDiv.textContent = 'Please select a recipe first.';
@@ -1336,9 +1417,6 @@ async function handleAddToWhitelist() {
         responseMessageDiv.textContent = response.message || 'Action completed.';
         responseMessageDiv.className = 'success';
         document.getElementById('user-search').value = ''; 
-        // Optionally, if you store whitelist on recipe object in currentRecipes, update it
-        // and re-render something, or fetch shared users for this recipe.
-        // For now, a success message is sufficient.
     } catch (error) {
         console.error("Error adding to whitelist:", error);
         const coreErrorMessage = error.message.includes("HTTP error!") ?
@@ -1362,8 +1440,24 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log(`script.js DOMContentLoaded: Found ${tabs.length} tabs and ${tabContents.length} tab contents.`);
 
     tabs.forEach(tab => {
-        tab.addEventListener('click', () => switchTab(tab.getAttribute('data-tab')));
+        tab.addEventListener('click', () => {
+            const tabId = tab.getAttribute('data-tab');
+            // Handle cancelEdit confirmation if switching away from edit mode
+            if (document.getElementById('recipe-form')?.dataset.editingId && 
+                document.querySelector('.tab[data-tab="add"]')?.classList.contains('active') &&
+                tabId !== 'add') {
+                if (confirm("You have unsaved changes. Are you sure you want to leave the edit form?")) {
+                    cancelEdit(); // This will also switch tab if not prevented
+                    switchTab(tabId); // Explicitly switch after cancel
+                } else {
+                    // User cancelled leaving edit form, do nothing (don't switch tab)
+                }
+            } else {
+                switchTab(tabId);
+            }
+        });
     });
+
     if (!document.querySelector('.tab.active') && tabs.length > 0) {
         const initialTab = window.location.hash.substring(1) || tabs[0].getAttribute('data-tab');
         if (document.getElementById(initialTab) && document.querySelector(`.tab[data-tab="${initialTab}"]`)) {
@@ -1377,21 +1471,39 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipeForm = document.getElementById('recipe-form');
     if (recipeForm) recipeForm.addEventListener('submit', handleFormSubmit);
 
-    const recipeImageInput = document.getElementById('recipe-image');
-    if (recipeImageInput) recipeImageInput.addEventListener('change', () => handleFileChange(recipeImageInput));
+    // File upload trigger & feedback
+    const fileUploadArea = document.getElementById('file-upload');
+    if (fileUploadArea) { 
+        const fileInputElement = document.getElementById('recipe-image');
+        if (fileInputElement) { 
+            fileUploadArea.addEventListener('click', () => fileInputElement.click());
+            fileUploadArea.addEventListener('dragover', (event) => {
+                event.preventDefault(); 
+                fileUploadArea.classList.add('dragging'); 
+            });
+            fileUploadArea.addEventListener('dragleave', () => {
+                 fileUploadArea.classList.remove('dragging'); 
+            });
+            fileUploadArea.addEventListener('drop', (event) => {
+                event.preventDefault();
+                fileUploadArea.classList.remove('dragging');
+                if (event.dataTransfer.files.length > 0) {
+                    fileInputElement.files = event.dataTransfer.files; 
+                    handleFileChange(fileInputElement); 
+                }
+            });
+            fileInputElement.addEventListener('change', () => handleFileChange(fileInputElement));
+        }
+    }
     
     const shareRecipeSelect = document.getElementById('share-recipe');
     if (shareRecipeSelect) {
         shareRecipeSelect.addEventListener('change', function() { displaySharePreview(this.value); });
-        // Initial call to displaySharePreview will be handled after loadRecipes completes and populates currentRecipes
     }
     
-    // Chart toggle buttons have onclick attributes in HTML, e.g., onclick="toggleChart(event, 'top-recipes')"
-
     if (document.getElementById('recipe-list')) {
         console.log("script.js DOMContentLoaded: recipe-list found, calling loadRecipes().");
         loadRecipes().then(() => {
-            // After recipes are loaded, then call displaySharePreview for the initially selected recipe (if any)
             if (shareRecipeSelect) {
                 displaySharePreview(shareRecipeSelect.value);
             }
@@ -1400,7 +1512,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn("script.js DOMContentLoaded: recipe-list element NOT found. Recipes will not be loaded for this page.");
     }
 
-    const mailboxIcon = document.querySelector('.mailbox-icon'); // Changed from #mailbox-icon if it's a class
+    const mailboxIcon = document.querySelector('.mailbox-icon'); 
     const mailboxPopup = document.getElementById('mailbox-popup');
     const closePopup = document.getElementById('close-popup');
 
@@ -1429,7 +1541,6 @@ document.addEventListener('DOMContentLoaded', function() {
         recipeTimeInput.addEventListener('input', e => e.target.value = e.target.value.replace(/[^0-9]/g, ''));
     }
 
-    // Whitelist User Search Event Listener (New)
     const userSearchInput = document.getElementById('user-search');
     if (userSearchInput) {
         let searchTimeout;
@@ -1447,12 +1558,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Add to Whitelist Button Event Listener (New)
     const addToWhitelistBtn = document.getElementById('add-to-whitelist-btn');
     if (addToWhitelistBtn) {
         addToWhitelistBtn.addEventListener('click', handleAddToWhitelist);
     }
-     // Initial state for whitelist controls based on whether a recipe is selected
     if (shareRecipeSelect && userSearchInput && addToWhitelistBtn) {
         if (!shareRecipeSelect.value) {
             userSearchInput.disabled = true;
@@ -1472,14 +1581,12 @@ document.addEventListener('DOMContentLoaded', function() {
             z-index: 100;
             max-height: 150px;
             overflow-y: auto;
-            /* Adjust width relative to its container or the input field */
-            left: 0; /* Or align with input */
-            right: 0; /* Or align with input */
-            margin-top: 0; /* Position directly below input */
+            left: 0; 
+            right: 0; 
+            margin-top: 0; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        /* Ensure the parent of #user-search and #suggestions has position: relative; if needed */
-        .form-group /* or a specific wrapper for #user-search */ {
+        .form-group {
             position: relative; 
         }
         #suggestions li {
@@ -1493,8 +1600,101 @@ document.addEventListener('DOMContentLoaded', function() {
         #suggestions li:hover {
             background-color: #f5f5f5;
         }
+
+        /* Mailbox Avatar CSS */
+        .shared-recipe-item {
+             align-items: flex-start; 
+        }
+        .shared-recipe-icon {
+            margin-right: 12px;
+            flex-shrink: 0;
+            width: 40px; 
+            height: 40px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%; 
+            overflow: hidden; 
+            background-color: var(--light-grey); 
+        }
+        .shared-recipe-sharer-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; 
+        }
+        .shared-recipe-sharer-avatar.default {
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 1.2rem; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .shared-recipe-details {
+            padding-top: 2px; 
+        }
+        /* Dynamic Ingredient Input List */
+        #ingredient-list { list-style: none; padding: 0; margin-bottom: 15px; }
+        #ingredient-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; background-color: #f9f9f9; border-radius: 4px; margin-bottom: 5px; }
+        #ingredient-list li span { flex-grow: 1; }
+        #ingredient-list li button { background: none; border: none; color: var(--danger-text); cursor: pointer; font-size: 1rem; padding: 0 5px; }
+        #ingredient-list li button:hover { color: #a80000; }
+        .ingredient-input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .ingredient-input-group input { flex-grow: 1; }
     `;
     document.head.appendChild(style);
+    
+    // --- Ingredient Input Setup ---
+    const ingredientInputEl   = document.getElementById('ingredient-input'); // Ensure this ID matches home.html
+    const addIngredientBtnEl = document.getElementById('add-ingredient-btn'); // Ensure this ID matches home.html
+
+    if (ingredientInputEl && addIngredientBtnEl) {
+        addIngredientBtnEl.addEventListener('click', () => {
+            const val = ingredientInputEl.value.trim();
+            if (!val) return;
+            ingredients.push(val);
+            ingredientInputEl.value = '';
+            ingredientInputEl.focus();
+            renderList();
+        });
+        ingredientInputEl.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent form submission if inside one
+                addIngredientBtnEl.click();
+            }
+        });
+    } else {
+        console.warn("Ingredient input elements not found. Dynamic ingredient input will not work.");
+    }
+
 
     console.log("script.js: DOMContentLoaded setup COMPLETED.");
-});
+}); 
+
+
+// --- Ingredient Input Functions ---
+function renderList() {
+  const listEl = document.getElementById('ingredient-list'); // Ensure this ID matches home.html
+  if (!listEl) {
+      console.warn("renderList: ingredient-list element not found.");
+      return;
+  }
+  listEl.innerHTML = '';
+  ingredients.forEach((item, idx) => {
+    const li = document.createElement('li');
+    const span = document.createElement('span');
+    span.textContent = item;
+    li.appendChild(span);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button'; // Important to prevent form submission
+    delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    delBtn.addEventListener('click', () => {
+      ingredients.splice(idx, 1);
+      renderList();
+    });
+
+    li.appendChild(delBtn);
+    listEl.appendChild(li);
+  });
+}
