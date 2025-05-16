@@ -70,6 +70,15 @@ class SeleniumTest(unittest.TestCase):
         )
 
         return super().setUp()
+    
+    def tearDown(self):
+        self.server_thread.terminate()
+        self.driver.close()
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+        return super().tearDown()
 
     # just see if the website even loads
     def test_indexpage_loads(self):
@@ -121,16 +130,8 @@ class SeleniumTest(unittest.TestCase):
             expected_conditions.url_changes(localhost + "home")
         )
 
-        login_button = self.driver.find_element(By.ID, "login")
-        login_button.click()
-
-        WebDriverWait(self.driver, 10).until(
-            expected_conditions.url_changes(localhost)
-        )
-
-        # Check if the logout was successful
-        success_message = self.driver.find_element(By.CLASS_NAME, "alert-info")
-        self.assertEqual("You have been logged out.\n×", success_message.text)
+        logout_message = self.driver.find_element(By.CLASS_NAME, "alert-info")
+        self.assertEqual("You have been logged out.\n×", logout_message.text)
     
     def test_add_recipe(self):
         self.helper_login()
@@ -149,13 +150,17 @@ class SeleniumTest(unittest.TestCase):
         # Find the recipe fields
         recipe_name_field = self.driver.find_element(By.ID, "recipe-name")
         recipe_time_field = self.driver.find_element(By.ID, "recipe-time")
-        recipe_ingredients_field = self.driver.find_element(By.ID, "recipe-ingredients")
+        recipe_ingredients_field = self.driver.find_element(By.ID, "ingredient-input")
+        recipe_add_button = self.driver.find_element(By.ID, "add-ingredient-btn")
         recipe_instructions_field = self.driver.find_element(By.ID, "recipe-instructions")
 
         # Fill in the fields
         recipe_name_field.send_keys("Test Recipe")
         recipe_time_field.send_keys("30")
-        recipe_ingredients_field.send_keys("Test1 30g, Test2 20g")
+        recipe_ingredients_field.send_keys("Test1 30g")
+        recipe_add_button.click()
+        recipe_ingredients_field.send_keys("Test2 20g")
+        recipe_add_button.click()
         recipe_instructions_field.send_keys("Test instructions")
 
         # Special case for category
@@ -163,15 +168,12 @@ class SeleniumTest(unittest.TestCase):
         recipe_category_field.select_by_visible_text("Dessert")
 
         # Submit the form
-        submit_button = self.driver.find_element(By.ID, "save-recipe")
+        submit_button = self.driver.find_element(By.ID, "save-recipe-btn")
         submit_button.click()
-
-        alert = WebDriverWait(self.driver, 10).until(expected_conditions.alert_is_present())
-        alert.accept()
 
         WebDriverWait(self.driver, 10).until(
             expected_conditions.text_to_be_present_in_element_attribute(
-                (By.ID, "my-recipes"),
+                (By.ID, "my-recipes-button"),
                 "class",
                 "active"
             )
@@ -181,17 +183,7 @@ class SeleniumTest(unittest.TestCase):
         recipe_title_field = self.driver.find_element(By.CLASS_NAME, "recipe-title")
         self.assertEqual("Test Recipe", recipe_title_field.text)
 
-    
-    def tearDown(self):
-        self.server_thread.terminate()
-        self.driver.close()
-        db.session.remove()
-        db.drop_all()
-        self.app_context.pop()
-
-        return super().tearDown()
-
-# MORE SELENIUM TESTS HERE
+    # MORE SELENIUM TESTS HERE
 
 # Instructions to run the tests:
 # 1. Ensure your application is running locally (e.g., on http://localhost:5000).
