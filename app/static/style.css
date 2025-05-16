@@ -636,6 +636,11 @@ body > .custom-alert {
     margin-top: 20px;
     position: relative;
 }
+.chart-toggle-btn {
+    margin-left: 10px; 
+    font-size: 0.8rem;
+    text-align: right;
+}
 
 /* --- Share Section --- */
 .share-options {

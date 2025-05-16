@@ -612,9 +612,17 @@ def view_log_detail(log_id):
 
 def calculate_user_stats(user_id):
     stats = {
-        'total_sessions': 0, 'most_frequent_recipe': {'name': '-', 'count': 0},
-        'total_time_logged_seconds': 0, 'total_time_logged_hours': 0.0,
-        'average_rating': 0.0, 'top_recipes_data': [], 'monthly_frequency_data': []
+        'total_sessions': 0,
+        'most_frequent_recipe': {'name': '-', 'count': 0},
+        'total_time_logged_seconds': 0, 
+        'total_time_logged_hours': 0.0,
+        'average_rating': 0.0, 
+        'top_recipes_data': [], 
+        'monthly_frequency_data': [],
+        'top_recipes_this_month_data': [],
+        'weekly_frequency_data': [],
+        'top_rated_data': [],
+        'top_rated_this_month_data': []
     }
     try:
         stats['total_sessions'] = CookingLog.query.filter_by(user_id=user_id).count()
@@ -654,6 +662,54 @@ def calculate_user_stats(user_id):
         for month_db, count in monthly_logs:
             if month_db in month_counts: 
                 month_counts[month_db] = int(count)
+        
+        first_day_of_month = today.replace(day=1)
+        top_recipes_month = (db.session.query(Recipe.name, func.count(CookingLog.id).label('log_count'))
+                       .join(CookingLog, Recipe.id == CookingLog.recipe_id)
+                       .filter(CookingLog.user_id == user_id,
+                               CookingLog.date_cooked >= first_day_of_month)
+                       .group_by(Recipe.name)
+                       .order_by(desc('log_count'))
+                       .limit(5).all())
+        stats['top_recipes_this_month_data'] = [{'name': name, 'count': int(count)} for name, count in top_recipes_month]
+
+        # Weekly Frequency Current Week (SQLite compatible)
+        start_of_week = today - timedelta(days=today.weekday())  # Monday is the start of the week
+        end_of_week = start_of_week + timedelta(days=6)
+        weekly_counts = {day: 0 for day in range(1, 8)}  # Days 1 (Monday) to 7 (Sunday)
+        weekly_logs = (db.session.query(func.strftime('%w', CookingLog.date_cooked).label('day_of_week'),
+                                       func.count(CookingLog.id).label('count'))
+                       .filter(CookingLog.user_id == user_id,
+                               CookingLog.date_cooked >= start_of_week,
+                               CookingLog.date_cooked <= end_of_week)
+                       .group_by('day_of_week')
+                       .all())
+        
+        # SQLite returns Sunday as 0, so adjust to make Monday 1 and Sunday 7
+        day_mapping = {0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6}
+        for day_of_week, count in weekly_logs:
+            adjusted_day = day_mapping.get(int(day_of_week), 7)
+            weekly_counts[adjusted_day] = int(count)
+        stats['weekly_frequency_data'] = [{'day': d, 'count': weekly_counts[d]} for d in range(1, 8)]
+
+        top_rated = (db.session.query(Recipe.name, func.avg(CookingLog.rating).label('avg_rating'))
+                    .join(CookingLog, Recipe.id == CookingLog.recipe_id)
+                    .filter(CookingLog.user_id == user_id,
+                            CookingLog.rating.isnot(None))
+                    .group_by(Recipe.name)
+                    .order_by(desc('avg_rating'))
+                    .limit(5).all())
+        stats['top_rated_data'] = [{'name': name, 'rating': float(avg)} for name, avg in top_rated]
+
+        top_rated_month = (db.session.query(Recipe.name, func.avg(CookingLog.rating).label('avg_rating'))
+                         .join(CookingLog, Recipe.id == CookingLog.recipe_id)
+                         .filter(CookingLog.user_id == user_id,
+                                 CookingLog.rating.isnot(None),
+                                 CookingLog.date_cooked >= first_day_of_month)
+                         .group_by(Recipe.name)
+                         .order_by(desc('avg_rating'))
+                         .limit(5).all())
+        stats['top_rated_this_month_data'] = [{'name': name, 'rating': float(avg)} for name, avg in top_rated_month]
         
         sorted_months = sorted(month_counts.keys()) 
         stats['monthly_frequency_data'] = [{'month': m, 'count': month_counts[m]} for m in sorted_months]
