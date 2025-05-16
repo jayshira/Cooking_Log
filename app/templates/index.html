@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Welcome - KitchenLog</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Consistent FA version -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet"> <!-- Poppins from intro-page -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    /* Inline styles from intro-page for Poppins font and specific logo/feature styling */
     body {
       font-family: 'Poppins', sans-serif;
     }
-    .logo { /* Specific logo style from intro-page for index */
+    .logo {
       font-size: 2.8rem;
       font-weight: 700;
       letter-spacing: -1px;
@@ -20,24 +19,13 @@
       align-items: center;
       gap: 10px;
     }
-    .feature-card img { /* Styling for feature images from intro-page */
-      width: 100%;
-      max-width: 600px;
-      height: 300px;
-      object-fit: cover;
-      border-radius: 10px;
-      margin-bottom: 1rem;
-      background-color: #e0e0e0; /* Placeholder background */
-    }
   </style>
 </head>
 <body>
   <header>
     <div class="container">
-      <!-- Logo style from intro-page -->
       <h1 class="logo"><i class="fas fa-utensils fa-sm"></i> <span style="color:#fff">Kitchen</span><span style="color:var(--light-color)">Log</span></h1>
       <p class="subtitle">Your all-in-one recipe companion – log, track, and analyze your cooking journey!</p>
-      <!-- Nav buttons from main (btn-primary, id="login") -->
       <nav class="auth-buttons">
         <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" id="login">Log In</a>
         <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">Sign Up</a>
@@ -46,7 +34,6 @@
   </header>
 
   <main class="container">
-    <!-- Flashed messages from main, important for user feedback -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-messages" style="margin-bottom: 20px;">
@@ -60,7 +47,6 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Intro section from intro-page (more welcoming and direct CTAs) -->
     <section class="intro-section card" style="text-align: center;">
       <h2>Welcome to KitchenLog!</h2>
       <p style="font-size: 1.1rem; color: var(--grey); margin-bottom: 25px;">
@@ -73,30 +59,25 @@
       </div>
     </section>
 
-    <!-- Features section from intro-page (more detailed with images) -->
     <section class="features-section">
       <h2 style="text-align:center; margin-bottom:2rem;">✨ Key Features</h2>
 
-      <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Recipe+Logging+Image" alt="Recipe Logging"> <!-- Placeholder, replace with actual images -->
+      <div class="feature-card card" style="text-align: center;">
         <h3><i class="fas fa-book-open"></i> Organize Recipes</h3>
         <p>Store all your favorite recipes with ingredients, instructions, and personal notes.</p>
       </div>
 
-      <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Cooking+Tracker+Image" alt="Cooking Tracker"> <!-- Placeholder -->
+      <div class="feature-card card" style="text-align: center;">
         <h3><i class="fas fa-utensils"></i> Track Cooking</h3>
         <p>Log your cooking sessions, maintain streaks, and reflect with personal feedback.</p>
       </div>
 
-      <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Stats+Insight+Image" alt="Cooking Stats"> <!-- Placeholder -->
+      <div class="feature-card card" style="text-align: center;">
         <h3><i class="fas fa-chart-line"></i> Gain Insights</h3>
         <p>Discover patterns in your cooking habits with smart statistics and visualizations.</p>
       </div>
 
-      <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Share+Feature+Image" alt="Sharing Feature"> <!-- Placeholder -->
+      <div class="feature-card card" style="text-align: center;">
         <h3><i class="fas fa-share-alt"></i> Share & Discover</h3>
         <p>Share your culinary creations and get inspired by others in the community.</p>
       </div>
