@@ -1114,3 +1114,176 @@ footer {
 
     .chart-container { height: 300px; }
 }
+
+/* --- Profile Page & Edit Profile Common PFP Styles --- */
+.profile-picture { /* Base for both img and div */
+    border-radius: 50%;
+    border: 3px solid var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex-shrink: 0; 
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; 
+}
+
+.profile-picture-img { /* Applied to <img> tag */
+    object-fit: cover; 
+    width: 100%; 
+    height: 100%;
+}
+
+.profile-picture-default { /* Applied to <div> for default */
+    background-color: var(--secondary-color); 
+    color: var(--white);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.profile-picture-default span {
+    line-height: 1; 
+}
+
+/* --- Profile Page Specific (/profile) --- */
+.profile-container { max-width: 800px; margin: 30px auto; }
+
+.profile-header { 
+    display: flex; 
+    align-items: center; /* Vertically align items */
+    margin-bottom: 25px; 
+    gap: 20px; /* Space between avatar and info */
+    flex-wrap: wrap;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--light-grey); /* Separator */
+}
+
+.profile-avatar-container .profile-picture { /* For the main profile page view */
+    width: 100px;  /* Smaller PFP on profile view */
+    height: 100px; /* Smaller PFP on profile view */
+}
+.profile-avatar-container .profile-picture-default {
+    font-size: 2.5rem; /* Adjust initial size for 100px circle */
+}
+
+.profile-info { 
+    flex-grow: 1; 
+}
+.profile-info h1 { 
+    font-size: 1.8rem; /* Slightly smaller main name */
+    margin-top: 0; /* Remove top margin if any from h1 default */
+    margin-bottom: 3px; 
+    color: var(--dark-color); 
+}
+.profile-info p.profile-email { /* Target specific p tag */
+    font-size: 1rem; 
+    color: var(--grey); 
+    margin-top: 0;
+    margin-bottom: 12px; 
+}
+.profile-actions { 
+    text-align: left; /* Align edit button to the left under info */
+    margin-top:10px; 
+}
+
+.profile-bio { 
+    margin-bottom: 25px; 
+    padding: 15px; 
+    background-color: var(--bg-light); 
+    border-left: 3px solid var(--secondary-color); 
+    border-radius: 4px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+.profile-bio h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: var(--dark-color);
+}
+.profile-bio p {
+    margin-bottom: 0;
+}
+
+.profile-stats { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+    gap: 15px; 
+    margin-bottom: 25px; 
+}
+.profile-stat-card { 
+    background-color: var(--white); 
+    padding: 15px; 
+    border-radius: 8px; 
+    text-align: center; 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07); 
+}
+.profile-stat-card .value { 
+    font-size: 1.8rem; 
+    font-weight: bold; 
+    color: var(--primary-color); 
+    display: block; 
+    margin-bottom: 5px; 
+}
+.profile-stat-card .label { 
+    font-size: 0.9rem; 
+    color: var(--grey); 
+}
+
+/* --- Edit Profile Page Specific (/profile/edit) --- */
+.edit-profile-container { max-width: 700px; margin: 30px auto; }
+.current-profile-pic-container { text-align: center; margin-bottom: 20px; }
+
+.current-profile-pic-edit.profile-picture { /* For the edit page preview */
+    width: 120px; /* Kept slightly larger for editing preview */
+    height: 120px;
+    border-width: 2px;
+    border-color: var(--light-grey);
+    margin-bottom: 10px;
+}
+.current-profile-pic-edit.profile-picture-default {
+    font-size: 3rem; 
+}
+
+/* For FileField input styling */
+input[type="file"].form-control-file {
+    display: block;
+    width: 100%;
+    padding: .375rem .75rem;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #495057;
+    background-color: var(--white);
+    background-clip: padding-box;
+    border: 1px solid var(--light-grey);
+    border-radius: .25rem;
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+input[type="file"].form-control-file:focus {
+    border-color: var(--primary-color);
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb, 174, 220, 129),.25); /* Fallback RGB if var not set */
+}
+.form-group small.form-text {
+    font-size: 0.85em;
+    color: var(--grey);
+    display: block;
+    margin-top: .25rem;
+}
+
+/* Responsive adjustments for profile header */
+@media (max-width: 576px) {
+    .profile-header {
+        flex-direction: column; /* Stack avatar and info on small screens */
+        text-align: center; /* Center text when stacked */
+    }
+    .profile-avatar-container .profile-picture { /* Ensure it centers when stacked */
+        margin-left: auto;
+        margin-right: auto;
+        margin-bottom: 15px; /* Add space below avatar when stacked */
+    }
+    .profile-info h1 { 
+        font-size: 1.6rem; 
+    }
+    .profile-actions { 
+        text-align: center; /* Center edit button when stacked */
+    }
+}

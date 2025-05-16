@@ -8,6 +8,8 @@ class Config:
     """Base configuration class."""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'a-very-hard-to-guess-string-indeed'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    UPLOAD_FOLDER_PROFILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app/static/uploads/profile_pics')
+
     # Add other common configurations here
 
 class DevelopmentConfig(Config):

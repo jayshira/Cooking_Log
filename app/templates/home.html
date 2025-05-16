@@ -45,14 +45,25 @@
       <p class="subtitle">Your recipes, logs, and stats</p>
 
       <!-- User Authentication: Combining structure from intro-page with IDs and specific styling from main -->
-      <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
+            <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
         {% if current_user.is_authenticated %}
-          <span style="margin-right: 15px; color: white; opacity: 0.9;" id="welcome-message"> <!-- id from main -->
+          <span style="margin-right: 10px; color: white; opacity: 0.9; display: inline-flex; align-items: center;" id="welcome-message">
+            <!-- Small profile pic/default in header -->
+            {% if current_user.profile_picture_url %}
+                <img src="{{ current_user.profile_picture_url }}" alt="PFP" 
+                     style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; border: 1px solid var(--light-color);">
+            {% else %}
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background-color: var(--secondary-color); color: white; font-size: 0.8em; vertical-align: middle; margin-right: 8px; font-weight:bold; border: 1px solid var(--light-color);">
+                    {{ current_user.username[0].upper() if current_user.username else 'K' }}
+                </span>
+            {% endif %}
             Welcome, {{ current_user.username }}!
           </span>
-          <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" id="logout" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a> <!-- id and style from main -->
+          <a href="{{ url_for('main.profile') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color); margin-right: 5px;">
+            <i class="fas fa-user"></i> My Profile
+          </a>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" id="logout" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
         {% else %}
-          <!-- Fallback, styled like main for consistency if this part is ever reached -->
           <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Log In</a>
           <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);">Sign Up</a>
         {% endif %}
