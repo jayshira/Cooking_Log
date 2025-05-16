@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - KitchenLog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles for profile picture are in style.css -->
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-user-circle"></i> {{ title }}</h1>
+             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
+                <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to Kitchen
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container profile-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <div class="profile-header">
+                <div class="profile-avatar-container"> <!-- New container for avatar -->
+                    {% if user.profile_picture_url %}
+                        <img src="{{ user.profile_picture_url }}" 
+                             alt="{{ user.username }}'s Profile Picture" class="profile-picture profile-picture-img">
+                    {% else %}
+                        <div class="profile-picture profile-picture-default">
+                            <span>{{ user.username[0].upper() if user.username else 'K' }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="profile-info">
+                    <h1>{{ user.username }}</h1>
+                    <p class="profile-email">{{ user.email }}</p>
+                    <div class="profile-actions">
+                        <a href="{{ url_for('main.edit_profile') }}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Edit Profile</a>
+                    </div>
+                </div>
+            </div>
+
+            {% if user.bio %}
+            <div class="profile-bio">
+                <h4>About Me:</h4>
+                <p>{{ user.bio }}</p>
+            </div>
+            {% else %}
+            <div class="profile-bio">
+                <p><em>No bio provided. <a href="{{ url_for('main.edit_profile') }}">Add one?</a></em></p>
+            </div>
+            {% endif %}
+
+            <h3 style="margin-bottom: 15px; margin-top: 25px;">My Kitchen Stats</h3>
+            <div class="profile-stats">
+                <div class="profile-stat-card">
+                    <span class="value">{{ num_recipes }}</span>
+                    <span class="label">Recipes Added</span>
+                </div>
+                <div class="profile-stat-card">
+                    <span class="value">{{ num_logs }}</span>
+                    <span class="label">Sessions Logged</span>
+                </div>
+                <div class="profile-stat-card">
+                    <span class="value">{{ user.current_streak }} 🔥</span>
+                    <span class="label">Current Streak</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

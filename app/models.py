@@ -76,12 +76,14 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    # Werkzeug hashes can be long. String(256) is a safe length.
     password_hash = db.Column(db.String(256), nullable=False)
+    
+    # Ensure these lines are present and correct
+    bio = db.Column(db.Text, nullable=True)
+    profile_picture_url = db.Column(db.String(255), nullable=True) 
 
     recipes = db.relationship('Recipe', backref='author', lazy=True)
     cooking_logs = db.relationship('CookingLog', backref='cook', lazy=True)
-
     last_cooked_date = db.Column(db.Date, nullable=True)
     current_streak = db.Column(db.Integer, default=0, nullable=False)
 

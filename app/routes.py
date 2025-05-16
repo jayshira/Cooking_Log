@@ -1,20 +1,47 @@
 # app/routes.py
-from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, abort
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, abort, current_app
 from flask_login import login_required, current_user
 from .models import Recipe, User, CookingLog, SharedRecipe, db
-from datetime import date, datetime, timedelta, timezone # <--- MAKE SURE timezone IS IMPORTED HERE
+from datetime import date, datetime, timedelta, timezone 
 from zoneinfo import ZoneInfo 
 from sqlalchemy import func, desc
-import base64 # For image encoding
+import base64 
+import os 
+from werkzeug.utils import secure_filename 
+from .forms import UpdateProfileForm # Import the new form
 
-# If using Python < 3.9, install pytz (pip install pytz) and use:
-# import pytz
-# PERTH_TZ = pytz.timezone('Australia/Perth')
 
-# Define Perth Timezone
 PERTH_TZ = ZoneInfo("Australia/Perth")
 
 main = Blueprint('main', __name__)
+
+# --- Helper function for image saving (No Pillow) ---
+def save_profile_picture(form_picture_file):
+    # form_picture_file is a FileStorage object from Flask/Werkzeug
+    if not form_picture_file or not form_picture_file.filename: # Check if a file was actually submitted
+        return None
+
+    filename = secure_filename(form_picture_file.filename)
+    # Add user_id and timestamp to ensure filename uniqueness
+    unique_filename = f"user_{current_user.id}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{filename}" # Added microseconds for more uniqueness
+    
+    upload_folder = current_app.config['UPLOAD_FOLDER_PROFILE']
+    # Create upload folder if it doesn't exist
+    os.makedirs(upload_folder, exist_ok=True)
+    
+    picture_path = os.path.join(upload_folder, unique_filename)
+    
+    try:
+        form_picture_file.save(picture_path) # Save the file directly
+        # Return the URL path relative to the static folder
+        return url_for('static', filename=f'uploads/profile_pics/{unique_filename}')
+    except Exception as e:
+        print(f"Error saving profile picture {picture_path}: {e}")
+        # Optionally flash a message or handle error more robustly
+        flash("An error occurred while saving the profile picture.", "danger")
+        return None
+
+
 # --- Helper function for streak calculation ---
 def _recalculate_user_streak_and_last_cooked(user_id):
     user = db.session.get(User, user_id)
@@ -53,7 +80,7 @@ def _recalculate_user_streak_and_last_cooked(user_id):
     if user.current_streak < 0: 
         user.current_streak = 0
     
-    db.session.add(user) # Add user to session for potential commit by caller
+    db.session.add(user) 
 
 # --- HTML Page Routes ---
 @main.route('/')
@@ -77,21 +104,19 @@ def home():
                                     .order_by(CookingLog.date_cooked.desc(), CookingLog.created_at.desc())\
                                     .limit(5).all()
         
-        # For displaying streak, directly use user.current_streak if last_cooked_date is recent
-        # The _recalculate_user_streak_and_last_cooked ensures user.current_streak is 0 if not recent
         today_perth = datetime.now(PERTH_TZ).date()
         if user.last_cooked_date:
             days_since_last_cook = (today_perth - user.last_cooked_date).days
-            if days_since_last_cook <= 1: # Cooked today or yesterday
+            if days_since_last_cook <= 1: 
                 streak_display_value = user.current_streak if user.current_streak is not None else 0
-            else: # Last cook was >1 day ago, streak should be 0 (already handled by recalculate)
-                streak_display_value = 0 # Or user.current_streak, which should be 0
-        else: # No cooking logs ever
+            else: 
+                streak_display_value = 0 
+        else: 
             streak_display_value = 0
             
     else:
         flash("Error loading user data.", "warning")
-        streak_display_value = 0 # Safety
+        streak_display_value = 0 
 
     stats = calculate_user_stats(user_id)
 
@@ -99,6 +124,76 @@ def home():
                          recent_logs=recent_logs, 
                          streak=streak_display_value, 
                          log_stats=stats)
+
+@main.route('/profile')
+@login_required
+def profile():
+    user = current_user 
+    num_recipes = Recipe.query.filter_by(user_id=user.id).count()
+    num_logs = CookingLog.query.filter_by(user_id=user.id).count()
+    # The default avatar logic will be in the template
+    return render_template('profile.html', title='My Profile', user=user, 
+                           num_recipes=num_recipes, num_logs=num_logs)
+
+@main.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = UpdateProfileForm(original_username=current_user.username, original_email=current_user.email)
+    if form.validate_on_submit():
+        try:
+            old_picture_filename_to_delete = None
+            # Check if a new picture is being uploaded
+            if form.profile_picture.data and form.profile_picture.data.filename:
+                # If there was an old picture, mark its filename for deletion
+                if current_user.profile_picture_url:
+                    old_picture_filename_to_delete = current_user.profile_picture_url.split('/')[-1]
+                
+                # Save the new picture
+                picture_file_url = save_profile_picture(form.profile_picture.data)
+                if picture_file_url:
+                    current_user.profile_picture_url = picture_file_url
+                # If picture_file_url is None, save_profile_picture flashed an error, current PFP remains.
+            
+            current_user.username = form.username.data
+            current_user.email = form.email.data
+            current_user.bio = form.bio.data
+            
+            db.session.commit()
+
+            # Delete old picture *after* successful commit IF a new one was saved AND old one existed
+            if old_picture_filename_to_delete:
+                # Ensure the new picture URL is different from the old one before deleting
+                # This handles cases where saving the new one might have failed silently
+                new_picture_filename = current_user.profile_picture_url.split('/')[-1] if current_user.profile_picture_url else None
+                if new_picture_filename and new_picture_filename != old_picture_filename_to_delete:
+                    old_picture_path = os.path.join(current_app.config['UPLOAD_FOLDER_PROFILE'], old_picture_filename_to_delete)
+                    if os.path.exists(old_picture_path):
+                        try:
+                            os.remove(old_picture_path)
+                            print(f"Deleted old profile picture: {old_picture_path}")
+                        except Exception as e:
+                            print(f"Error deleting old profile picture {old_picture_path}: {e}")
+            
+            flash('Your profile has been updated!', 'success')
+            return redirect(url_for('main.profile'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'An error occurred: {str(e)}', 'danger')
+            print(f"Error updating profile: {e}")
+
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.email.data = current_user.email
+        form.bio.data = current_user.bio
+    
+    # Pass current picture URL and user initial for display in edit form
+    current_pic_url = current_user.profile_picture_url
+    user_initial = current_user.username[0].upper() if current_user.username else 'K'
+    
+    return render_template('edit_profile.html', title='Edit Profile', form=form, 
+                           current_profile_pic_url=current_pic_url,
+                           user_initial=user_initial)
+
 
 # --- Route to view a specific recipe page ---
 @main.route('/view_recipe/<int:recipe_id>')
@@ -128,14 +223,13 @@ def view_recipe(recipe_id):
 @login_required
 def start_cooking_session(recipe_id):
     recipe = Recipe.query.get_or_404(recipe_id)
-    # Allow whitelisted users to start cooking shared recipes too, they log it for themselves
     is_owner = (recipe.user_id == current_user.id)
     current_recipe_whitelist = recipe.whitelist if isinstance(recipe.whitelist, list) else []
     is_whitelisted = (current_user.id in current_recipe_whitelist)
 
     if not is_owner and not is_whitelisted:
          flash('You do not have permission to start a cooking session for this recipe.', 'warning')
-         return redirect(url_for('main.view_recipe', recipe_id=recipe.id)) # Or main.home
+         return redirect(url_for('main.view_recipe', recipe_id=recipe.id)) 
 
     today_iso = date.today().isoformat()
     return render_template('cooking_session.html', recipe=recipe, today_iso=today_iso)
@@ -168,7 +262,7 @@ def log_cooking_session(recipe_id):
                 return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
             try:
                 image_data = image_file.read()
-                if len(image_data) > 5 * 1024 * 1024: # Max 5MB
+                if len(image_data) > 5 * 1024 * 1024: 
                     flash('Image file is too large (max 5MB).', 'danger')
                     return redirect(url_for('main.start_cooking_session', recipe_id=recipe.id))
 
@@ -177,7 +271,6 @@ def log_cooking_session(recipe_id):
             except Exception as img_e:
                 print(f"Error processing log image: {img_e}")
                 flash('Could not process the uploaded image.', 'danger')
-                # Don't necessarily return, image is optional
 
         if not date_cooked_str:
              flash('Date cooked is required.', 'danger')
@@ -198,10 +291,7 @@ def log_cooking_session(recipe_id):
         )
         db.session.add(new_log)
         
-        # CORRECTED: Call the helper function to update streak and last_cooked_date
         _recalculate_user_streak_and_last_cooked(current_user.id)
-        # The user object (current_user or fetched via db.session.get inside helper)
-        # will be added to the session by the helper.
 
         db.session.commit()
         flash(f'Successfully logged your cooking session for "{recipe.name}"!', 'success')
@@ -221,11 +311,10 @@ def edit_log(log_id):
 
     if log_entry.user_id != current_user.id:
         flash('You are not authorized to edit this log.', 'danger')
-        return redirect(url_for('main.view_logs')) # Or wherever appropriate
+        return redirect(url_for('main.view_logs')) 
 
     if request.method == 'POST':
         try:
-            # ... (your existing form data processing for log_entry)
             date_cooked_str = request.form.get('date_cooked')
             duration_minutes_str = request.form.get('duration_minutes')
             rating_str = request.form.get('rating')
@@ -287,13 +376,10 @@ def edit_log(log_id):
             log_entry.duration_seconds = new_duration_seconds
             log_entry.rating = new_rating
             log_entry.notes = notes if notes else None
-            # No need to db.session.add(log_entry) if it's already tracked by the session
             
-            db.session.commit() # Commit changes to the log entry
-
-            # CORRECTED: Call the helper function after committing log changes
+            db.session.commit() 
             _recalculate_user_streak_and_last_cooked(current_user.id)
-            db.session.commit() # Commit changes to the user (streak, last_cooked_date)
+            db.session.commit() 
 
             flash('Cooking log updated successfully!', 'success')
             return redirect(url_for('main.view_log_detail', log_id=log_entry.id)) 
@@ -302,9 +388,6 @@ def edit_log(log_id):
             db.session.rollback()
             print(f"Error updating log (ID: {log_id}): {e}")
             flash(f'An error occurred while updating the log: {str(e)}', 'danger')
-            # No need to return render_template here if you redirect anyway or if error is severe
-            # but if it's a validation error you might want to re-render with the form.
-            # For simplicity now, just pass. The render is outside the try/except for POST.
 
     return render_template('edit_log.html', log_entry=log_entry, title='Edit Cooking Log')
 
@@ -361,23 +444,17 @@ def delete_recipe_api(recipe_id):
         if recipe_to_delete.user_id != current_user.id:
              return jsonify({"error": "Unauthorized to delete this recipe"}), 403
 
-        # Find and delete all cooking logs associated with this recipe.
         logs_to_delete = CookingLog.query.filter_by(recipe_id=recipe_to_delete.id).all()
         for log in logs_to_delete:
             db.session.delete(log)
         
-        # Also, remove any SharedRecipe entries related to this recipe_id
         shared_entries_to_delete = SharedRecipe.query.filter_by(recipe_id=recipe_to_delete.id).all()
         for shared_entry in shared_entries_to_delete:
             db.session.delete(shared_entry)
 
-        # After deleting associated items, delete the recipe itself
         db.session.delete(recipe_to_delete)
         db.session.commit()
         
-        # Recalculate streak for the current user if any of their logs were deleted
-        # This is important if deleting a recipe also deletes logs that affected their streak.
-        # If logs_to_delete contained any logs by current_user:
         if any(log.user_id == current_user.id for log in logs_to_delete):
             _recalculate_user_streak_and_last_cooked(current_user.id)
             db.session.commit()
@@ -417,7 +494,7 @@ def update_recipe(recipe_id):
              recipe.ingredients = data['ingredients']; updated = True
         if 'instructions' in data and data['instructions'] and recipe.instructions != data['instructions']:
             recipe.instructions = data['instructions']; updated = True
-        if 'image' in data: 
+        if 'image' in data: # This allows clearing the image if 'image': null is sent
             recipe.image = data['image']; updated = True
         if updated:
             db.session.commit()
@@ -549,7 +626,6 @@ def add_to_whitelist(recipe_id):
             db.session.add(new_shared_notification)
             db.session.commit() 
             
-        # Simplified message
         return jsonify({"message": f"Recipe '{recipe.name}' shared with {user_to_add.username}."}), 200
     except Exception as e:
         db.session.rollback(); print(f"Error updating whitelist/shared_recipe for recipe {recipe.id}: {e}")
@@ -673,10 +749,9 @@ def calculate_user_stats(user_id):
                        .limit(5).all())
         stats['top_recipes_this_month_data'] = [{'name': name, 'count': int(count)} for name, count in top_recipes_month]
 
-        # Weekly Frequency Current Week (SQLite compatible)
-        start_of_week = today - timedelta(days=today.weekday())  # Monday is the start of the week
+        start_of_week = today - timedelta(days=today.weekday()) 
         end_of_week = start_of_week + timedelta(days=6)
-        weekly_counts = {day: 0 for day in range(1, 8)}  # Days 1 (Monday) to 7 (Sunday)
+        weekly_counts = {day: 0 for day in range(1, 8)}  
         weekly_logs = (db.session.query(func.strftime('%w', CookingLog.date_cooked).label('day_of_week'),
                                        func.count(CookingLog.id).label('count'))
                        .filter(CookingLog.user_id == user_id,
@@ -685,7 +760,6 @@ def calculate_user_stats(user_id):
                        .group_by('day_of_week')
                        .all())
         
-        # SQLite returns Sunday as 0, so adjust to make Monday 1 and Sunday 7
         day_mapping = {0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6}
         for day_of_week, count in weekly_logs:
             adjusted_day = day_mapping.get(int(day_of_week), 7)

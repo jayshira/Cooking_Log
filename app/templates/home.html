@@ -1,43 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <!-- Add this meta tag -->
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>My Kitchen - KitchenLog</title>
-        <!-- Other head elements -->
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    </head>
-<body>
-    <header>
-        <div class="container">
-             <!-- Changed H1 -->
-            <h1>🍳 My Kitchen</h1>
-            <p class="subtitle">Your recipes, logs, and stats</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}"> <!-- From main, essential -->
+  <title>My Kitchen - KitchenLog</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet"> <!-- From intro-page -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> <!-- Newer version from main, assuming it's preferred -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Inline styles from intro-page for Poppins font and specific logo styling */
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
 
-            <!-- User Authentication Links (Keep as is) -->
+    .logo { /* Copied from intro-page's head style block */
+      font-size: 2.6rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .logo .icon { /* Copied from intro-page's head style block */
+      font-size: 1.3em;
+      color: var(--light-color);
+    }
+
+    .logo .brand-highlight { /* Copied from intro-page's head style block */
+      color: var(--light-color);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <!-- Logo style from intro-page -->
+      <h1 class="logo">
+        <i class="fas fa-utensils icon"></i>
+        <span>My <span class="brand-highlight">Kitchen</span></span>
+      </h1>
+      <p class="subtitle">Your recipes, logs, and stats</p>
+
+      <!-- User Authentication: Combining structure from intro-page with IDs and specific styling from main -->
             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
-                {% if current_user.is_authenticated %}
-                    <span style="margin-right: 15px; color: white; opacity: 0.9;" id ="welcome-message">
-                        Welcome, {{ current_user.username }}!
-                    </span>
-                    <!-- Removed redundant My Kitchen/Dashboard links, added Logout -->
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" id="logout" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                {% else %}
-                    <!-- Should not happen on this page due to @login_required, but keep for safety -->
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Log In</a>
-                    <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);">Sign Up</a>
-                {% endif %}
-            </nav>
-        </div>
-    </header>
+        {% if current_user.is_authenticated %}
+          <span style="margin-right: 10px; color: white; opacity: 0.9; display: inline-flex; align-items: center;" id="welcome-message">
+            <!-- Small profile pic/default in header -->
+            {% if current_user.profile_picture_url %}
+                <img src="{{ current_user.profile_picture_url }}" alt="PFP" 
+                     style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; border: 1px solid var(--light-color);">
+            {% else %}
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background-color: var(--secondary-color); color: white; font-size: 0.8em; vertical-align: middle; margin-right: 8px; font-weight:bold; border: 1px solid var(--light-color);">
+                    {{ current_user.username[0].upper() if current_user.username else 'K' }}
+                </span>
+            {% endif %}
+            Welcome, {{ current_user.username }}!
+          </span>
+          <a href="{{ url_for('main.profile') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color); margin-right: 5px;">
+            <i class="fas fa-user"></i> My Profile
+          </a>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" id="logout" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Log In</a>
+          <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);">Sign Up</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
 
     <div class="container">
-        <!-- Flash Messages (Keep as is) -->
+        <!-- Flash Messages (This was consistent in the `main` version's body, common pattern) -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages" style="margin-bottom: 20px;">
@@ -48,17 +83,13 @@
             {% endif %}
         {% endwith %}
 
-        <!-- NEW: Display Cooking Streak and Recent Activity -->
+        <!-- Streak and Recent Activity Section (This was from `main` and is a good feature) -->
         {% if current_user.is_authenticated %}
         <div class="user-info-section card" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; padding: 20px 25px;">
-             <!-- Cooking Streak -->
              <div class="streak-display" style="text-align: center;">
                  <span style="font-size: 2.5rem; display:block; color: var(--primary-color);">🔥</span>
-                 <!-- MODIFIED HERE: Changed current_streak to streak -->
                  <span style="font-weight: bold; font-size: 1.2rem;">{{ streak }}</span> Day Streak!
              </div>
-
-             <!-- Recent Activity -->
              <div class="recent-activity" style="flex-grow: 1; min-width: 300px;">
                  <h3 style="margin-top: 0; margin-bottom: 10px; font-size: 1.1rem; color: var(--accent-color);">Recent Activity:</h3>
                  {% if recent_logs %}
@@ -66,7 +97,6 @@
                          {% for log in recent_logs %}
                              <li class="list-group-item" style="font-size: 0.9rem; padding: 5px 0; border-bottom: 1px dashed #eee;">
                                  <i class="fas fa-check-circle" style="color: var(--success-color); margin-right: 5px;"></i>
-                                 {# Ensure recipe_logged is loaded to prevent extra queries if using lazy='joined' is better #}
                                  Cooked <strong>{{ log.recipe_logged.name if log.recipe_logged else 'Deleted Recipe' }}</strong> on {{ log.date_cooked.strftime('%b %d, %Y') }}
                                  {% if log.rating %}({{ log.rating }}<i class="fas fa-star" style="color:#ffc107; font-size:0.8em;"></i>){% endif %}
                                  {% if log.duration_seconds %} <span class="text-muted" style="font-size:0.85em;">({{ (log.duration_seconds / 60)|round(0, 'floor') }} min)</span>{% endif %}
@@ -79,22 +109,18 @@
              </div>
         </div>
         {% endif %}
-        <!-- End NEW Section -->
 
-
+        <!-- Tabs (Structure from `main`, as it's more complete with mailbox) -->
         <div class="tabs">
-            <!-- Renamed Recipes tab, adjusted others -->
             <div class="tab active" data-tab="my-recipes" id="my-recipes-button">My Recipes</div>
             <div class="tab" data-tab="add" id="add-recipe-button">Add Recipe</div>
-            <!-- Changed Stats tab name -->
             <div class="tab" data-tab="recipe-stats" id="recipe-stats-button">Recipe Stats</div>
             <div class="tab" data-tab="share" id="share-recipe-button">Share Recipe</div>
             <div class="faketab mailbox-icon" id="mailbox-icon"><i class="fas fa-envelope"></i></div>
-            <!-- Remove disabled tabs as this page requires login -->
         </div>
 
-        <!-- My Recipes Tab -->
-        <div id="my-recipes" class="tab-content active"> <!-- Changed ID -->
+        <!-- My Recipes Tab (Consistent structure from `main`) -->
+        <div id="my-recipes" class="tab-content active">
             <div class="card">
                  <h2><i class="fas fa-book-open"></i> My Recipe Collection</h2>
                 <div class="search-bar">
@@ -106,14 +132,12 @@
             </div>
         </div>
 
-        <!-- Add Recipe Tab (Keep as is) -->
+        <!-- Add Recipe Tab (Consistent structure from `main`) -->
         <div id="add" class="tab-content">
              <div class="card">
                  <h2><i class="fas fa-plus-circle"></i> Add New Recipe</h2>
                  <form id="recipe-form">
-                     <!-- Form content remains the same -->
                      <div class="form-group">
-
                          <label for="recipe-name">
                             Recipe Name
                             <i class="fas fa-info-circle info-icon" title="Enter a title for your recipe."></i>
@@ -128,7 +152,6 @@
                          <select id="recipe-category" required>
                              <option value="">
                                 Select a category
-                                <i class="fas fa-info-circle info-icon" title="Enter total preparation and cooking time in minutes."></i>
                              </option>
                              <option value="breakfast">Breakfast</option>
                              <option value="lunch">Lunch</option>
@@ -144,7 +167,7 @@
                          <label for="recipe-time">
                             Total Time (minutes)
                             <i class="fas fa-info-circle info-icon" title="Enter total preparation and cooking time in minutes."></i>
-                         </label> <!-- Clarified label -->
+                         </label>
                          <input type="number" id="recipe-time" required min="1">
                      </div>
                     <div class="form-group">
@@ -173,32 +196,28 @@
                          </label>
                          <div class="file-upload" id="file-upload">
                              <i class="fas fa-cloud-upload-alt"></i>
-                             <p>Click or drag image here</p> <!-- Updated text -->
+                             <p>Click or drag image here</p>
                              <input type="file" id="recipe-image" accept="image/*">
                          </div>
                          <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
-                     </div>
-
-                     <button type="submit" class="btn" id="save-recipe-btn"><i class="fas fa-save"></i>Save Recipe</button>
+                   </div>
+                   <button type="submit" class="btn" id="save-recipe-btn"><i class="fas fa-save"></i>Save Recipe</button>
                  </form>
              </div>
          </div>
 
-        <!-- **** MODIFIED Recipe Stats Tab **** -->
+        <!-- Recipe Stats Tab (Consistent structure from `main`) -->
         <div id="recipe-stats" class="tab-content">
             <div class="card">
-                <!-- NEW TITLE -->
                 <h2 style="display: flex; justify-content: space-between; align-items: center;">
                 <span><i class="fas fa-chart-line"></i> My Cooking Statistics</span>
                 <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary btn-sm">
                     <i class="fas fa-list"></i> View Logs
                 </a>
             </h2>
-                <!-- NEW DESCRIPTION -->
                 <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">
                     Statistics based on your logged cooking sessions.
                 </p>
-                <!-- NEW STATS GRID -->
                 <div class="stats-grid" id="log-stats-display">
                     <div class="stat-card">
                         <div class="stat-label">Total Sessions Logged</div>
@@ -220,7 +239,6 @@
                         <div class="stat-label">(1-5 stars)</div>
                     </div>
                 </div>
-                <!-- NEW CHARTS -->
                 <h3 style="margin-top: 30px;">
                     Top 5 Most Logged Recipes
                     <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('top-recipes')">
@@ -228,8 +246,6 @@
                     </button>
                 </h3>
                 <div class="chart-container"><canvas id="top-recipes-chart"></canvas></div>
-                
-                <!-- New Top Rated Section -->
                 <h3 style="margin-top: 30px;">
                     Top 5 Highest Rated Recipes
                     <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('top-rated')">
@@ -237,8 +253,6 @@
                     </button>
                 </h3>
                 <div class="chart-container"><canvas id="top-rated-chart"></canvas></div>
-                
-                <!-- Modified Frequency Section -->
                 <h3 style="margin-top: 30px;">
                     <span id="frequency-title">Monthly Cooking Frequency</span>
                     <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('frequency')">
@@ -248,23 +262,19 @@
                 <div class="chart-container"><canvas id="frequency-chart"></canvas></div>
             </div>
         </div>
-        <!-- **** END MODIFIED Recipe Stats Tab **** -->
 
-        <!-- Share Tab -->
+        <!-- Share Tab (Consistent structure from `main`) -->
         <div id="share" class="tab-content">
             <div class="card">
                 <h2><i class="fas fa-share-alt"></i> Share Your Recipes</h2>
                 <p>Select one of your recipes to generate sharing links.</p>
-
                 <div class="form-group">
                 <label for="share-recipe">Choose Recipe</label>
                 <select id="share-recipe">
                     <option value="">Select a recipe</option>
                 </select>
                 </div>
-
                 <div id="share-preview" style="display: none;">
-                <!-- Preview -->
                 <div class="share-card">
                     <div class="preview-img" id="share-image"></div>
                     <div class="preview-info">
@@ -273,7 +283,6 @@
                     <p id="share-time"></p>
                     </div>
                 </div>
-                <!-- Share to user -->
                 <div class="share-to-user" style="margin-top: 20px;">
                     <p class="share-label">Share to user:</p>
                     <div class="share-actions">
@@ -290,7 +299,7 @@
         </div>
     </div> <!-- /.container -->
 
-    <!-- Mailbox Popup -->
+    <!-- Mailbox Popup (Structure from `main`) -->
     <div id="mailbox-popup" class="mailbox-popup">
         <div class="popup-header">
             <h3>Shared Recipes</h3>
@@ -298,37 +307,32 @@
         </div>
         <div class="popup-content">
             <p id="no-recipes-message">No shared recipes yet</p>
-            <div id="shared-recipes-list"></div> <!-- Changed ul to div -->
+            <div id="shared-recipes-list"></div>
         </div>
     </div>
 
-    <!-- Pass user ID AND log stats data to JS -->
-    <!-- **** CORRECTED SCRIPT BLOCK **** -->
-   <!-- Securely Pass User ID and Log Stats Data to JS -->
+   <!-- Script block for user ID and log stats (From `main`) -->
    <script type="text/javascript">
-    // Make LOG_STATS_DATA and CURRENT_USER_ID globally accessible
     var CURRENT_USER_ID = JSON.parse('{{ current_user.id | tojson | safe }}');
     var LOG_STATS_DATA = JSON.parse('{{ log_stats | tojson | safe }}');
 
     document.addEventListener("DOMContentLoaded", function() {
-        console.log("User ID (DOMContentLoaded):", CURRENT_USER_ID);
-        console.log("Log Stats (DOMContentLoaded):", LOG_STATS_DATA);
-
+        // console.log("User ID (DOMContentLoaded):", CURRENT_USER_ID); // Optional: for debugging
+        // console.log("Log Stats (DOMContentLoaded):", LOG_STATS_DATA); // Optional: for debugging
         const statsTab = document.querySelector('.tab[data-tab="recipe-stats"]');
         if (statsTab) {
             statsTab.addEventListener('click', function() {
                 if (typeof LOG_STATS_DATA !== 'undefined' && LOG_STATS_DATA !== null) {
                     updateStats();
                 } else {
-                    console.warn("LOG_STATS_DATA is not available when trying to update stats.");
+                    // console.warn("LOG_STATS_DATA is not available when trying to update stats."); // Optional
                 }
             });
         } else {
-            console.warn("Recipe stats tab not found in DOM.");
+            // console.warn("Recipe stats tab not found in DOM."); // Optional
         }
     });
 </script>
-
 <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

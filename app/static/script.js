@@ -436,7 +436,7 @@ async function handleFormSubmit(event) {
         // image: null // <-- REMOVE THIS INITIAL NULL VALUE
     };
 
-    const submitButton = event.target.querySelector('button[type="submit"]');
+     const submitButton = event.target.querySelector('button[type="submit"]'); 
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
@@ -1396,11 +1396,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Recipe form submission listener
-    const recipeForm = document.getElementById('recipe-form');
-    if (recipeForm) {
-        recipeForm.addEventListener('submit', handleFormSubmit);
-        // Note: The cancelEdit function adds/removes a cancel button dynamically
-    }
+   const recipeForm = document.getElementById('recipe-form');
+if (recipeForm) {
+    recipeForm.addEventListener('submit', handleFormSubmit); // Correctly attached to form
+}
 
     // Search functionality
     const searchInput = document.getElementById('recipe-search');

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - KitchenLog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles for profile picture are now in style.css -->
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-user-edit"></i> {{ title }}</h1>
+             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
+                <a href="{{ url_for('main.profile') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to Profile
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container edit-profile-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <form method="POST" action="{{ url_for('main.edit_profile') }}" enctype="multipart/form-data">
+                {{ form.hidden_tag() }} <!-- CSRF token -->
+
+                <div class="current-profile-pic-container">
+                     {% if current_profile_pic_url %}
+                        <img src="{{ current_profile_pic_url }}" alt="Current Profile Picture" class="profile-picture profile-picture-img current-profile-pic-edit">
+                     {% else %}
+                        <div class="profile-picture profile-picture-default current-profile-pic-edit">
+                            <span>{{ user_initial }}</span>
+                        </div>
+                     {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.profile_picture.label(class="form-label") }}
+                    {{ form.profile_picture(class="form-control-file") }}
+                    {% if form.profile_picture.errors %}
+                        {% for error in form.profile_picture.errors %}
+                            <span class="text-danger" style="font-size:0.9em; color:var(--danger-text);">{{ error }}</span><br>
+                        {% endfor %}
+                    {% endif %}
+                     <small class="form-text">Upload a new image (JPG, PNG, JPEG). Max 5MB. Leave blank to keep current.</small>
+                </div>
+                
+                <div class="form-group">
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-control", size=32) }}
+                    {% if form.username.errors %}
+                        {% for error in form.username.errors %}
+                            <span class="text-danger" style="font-size:0.9em; color:var(--danger-text);">{{ error }}</span><br>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control", size=32) }}
+                    {% if form.email.errors %}
+                        {% for error in form.email.errors %}
+                            <span class="text-danger" style="font-size:0.9em; color:var(--danger-text);">{{ error }}</span><br>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.bio.label(class="form-label") }}
+                    {{ form.bio(class="form-control", rows=4, placeholder="Tell us a little about yourself...") }}
+                    {% if form.bio.errors %}
+                        {% for error in form.bio.errors %}
+                            <span class="text-danger" style="font-size:0.9em; color:var(--danger-text);">{{ error }}</span><br>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
