@@ -623,26 +623,35 @@ function editRecipe(id) {
         return;
     }
 
+    switchTab('add');
+
     document.getElementById('recipe-name').value = recipe.name;
     document.getElementById('recipe-category').value = recipe.category;
     document.getElementById('recipe-time').value = recipe.time;
-    document.getElementById('recipe-ingredients').value = Array.isArray(recipe.ingredients) ? 
-        recipe.ingredients.join('\n') : recipe.ingredients;
     document.getElementById('recipe-instructions').value = recipe.instructions;
+
+    // Clear existing ingredients and populate new ones
+    ingredients = Array.isArray(recipe.ingredients) ? 
+        [...recipe.ingredients] : 
+        [];
+    renderList();
 
     document.getElementById('recipe-form').dataset.editingId = id;
 
+    // Update form header and button
     document.querySelector('#add h2').innerHTML = '<i class="fas fa-edit"></i> Edit Recipe';
-    document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Update Recipe';
+    document.getElementById('add-recipe-button').textContent = 'Edit Recipe';
+    const submitBtn = document.querySelector('#add button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Recipe';
 
-    if (Array.isArray(recipe.ingredients)) {
-        ingredients.length = 0;
-        ingredients.push(...recipe.ingredients);
-        renderList();
-    }   
+    // Add event listener to cancel when switching tabs
+    document.getElementById('my-recipes-button').addEventListener('click', cancelEdit);
+    document.getElementById('add-recipe-button').addEventListener('click', cancelEdit);
+    document.getElementById('recipe-stats-button').addEventListener('click', cancelEdit);
+    document.getElementById('share-recipe-button').addEventListener('click', cancelEdit);
 
+    // Add cancel button if missing
     if (!document.getElementById('cancel-edit-btn')) {
-        const submitBtn = document.querySelector('#add button[type="submit"]');
         const cancelBtn = document.createElement('button');
         cancelBtn.type = 'button';
         cancelBtn.id = 'cancel-edit-btn';
@@ -651,37 +660,6 @@ function editRecipe(id) {
         cancelBtn.onclick = cancelEdit;
         submitBtn.insertAdjacentElement('afterend', cancelBtn);
     }
-
-    function switschTab(tabName) {
-        const tabs = document.querySelectorAll('.tab');
-        const contents = document.querySelectorAll('.tab-content');
-
-        tabs.forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.tab === tabName);
-        });
-
-        contents.forEach(content => {
-            content.style.display = content.id === tabName ? 'block' : 'none';
-        });
-
-        if (tabName === 'add') {
-            const form = document.getElementById('recipe-form');
-            form.reset(); 
-
-            delete form.dataset.editingId;
-
-            if (typeof ingredients !== 'undefined') {
-            ingredients.length = 0;
-            renderList();
-            }
-
-            document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
-            document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Recipe';
-
-            const cancelBtn = document.getElementById('cancel-edit-btn');
-            if (cancelBtn) cancelBtn.remove();
-        }
-        }
 }
 
 // Cancel edit mode
@@ -689,18 +667,23 @@ function cancelEdit() {
     const form = document.getElementById('recipe-form');
     delete form.dataset.editingId;
     form.reset();
+    
+    // Clear ingredients
+    ingredients = [];
+    renderList();
 
     document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
+    document.getElementById('add-recipe-button').textContent = 'Add Recipe';
     document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+
+    // Remove event after being cancelled
+    document.getElementById('my-recipes-button').removeEventListener('click', cancelEdit);
+    document.getElementById('add-recipe-button').removeEventListener('click', cancelEdit);
+    document.getElementById('recipe-stats-button').removeEventListener('click', cancelEdit);
+    document.getElementById('share-recipe-button').removeEventListener('click', cancelEdit);
 
     const cancelBtn = document.getElementById('cancel-edit-btn');
     if (cancelBtn) cancelBtn.remove();
-
-    const fileUploadStatus = document.getElementById('file-upload-status');
-    if (fileUploadStatus) {
-        fileUploadStatus.textContent = '';
-        fileUploadStatus.className = '';
-    }
 }
 
 // Override default alert
