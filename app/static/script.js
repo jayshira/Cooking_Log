@@ -306,7 +306,7 @@ function renderRecipeCard(recipe) {
 
                 <!-- Edit Button (only for owner) -->
                 ${typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID ? `
-                <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})">
+                <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})" id="edit-recipe-btn">
                     <i class="fas fa-edit"></i> Edit
                 </button>
                 <a href="/start_cooking/${recipe.id}" class="btn btn-success btn-sm">
