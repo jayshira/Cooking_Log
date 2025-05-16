@@ -49,7 +49,15 @@ class SeleniumTest(unittest.TestCase):
         submit_button.click()
 
         WebDriverWait(self.driver, 10).until(
-            expected_conditions.url_changes(self.driver.current_url)
+            expected_conditions.url_changes(localhost + "auth/login")
+        )
+
+    def helper_logout(self):
+        logout_button = self.driver.find_element(By.ID, "logout")
+        logout_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.url_changes(localhost + "home")
         )
 
     def helper_add_recipe(self):
@@ -95,7 +103,35 @@ class SeleniumTest(unittest.TestCase):
                 "active"
             )
         )
+    def helper_share_recipe(self):
+        # Find the share button for the first recipe
+        share_button = self.driver.find_element(By.ID, "share-recipe-button")
+        share_button.click()
 
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element_attribute(
+                (By.ID, "share"),
+                "class",
+                "active"
+            )
+        )
+
+        recipe_select = Select(self.driver.find_element(By.ID, "share-recipe"))
+        recipe_select.select_by_visible_text("Test Recipe")
+        
+        share_username_field = self.driver.find_element(By.ID, "user-search")
+        share_username_field.send_keys("prebuilduser2")
+
+        # Submit the form
+        submit_button = self.driver.find_element(By.ID, "add-to-whitelist-btn")
+        submit_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element(
+                (By.ID, "response-message"),
+                ("Recipe 'Test Recipe' shared with prebuilduser2.")
+            )
+        )
 
     def setUp(self):
         self.testApp = create_app(TestConfig)
@@ -167,13 +203,8 @@ class SeleniumTest(unittest.TestCase):
     
     def test_user_logout(self):
         self.helper_login()
-
-        logout_button = self.driver.find_element(By.ID, "logout")
-        logout_button.click()
-
-        WebDriverWait(self.driver, 10).until(
-            expected_conditions.url_changes(localhost + "home")
-        )
+        self.helper_logout()
+        
 
         logout_message = self.driver.find_element(By.CLASS_NAME, "alert-info")
         self.assertEqual("You have been logged out.\n×", logout_message.text)
@@ -203,6 +234,88 @@ class SeleniumTest(unittest.TestCase):
         alert.accept()
 
         self.assertTrue(True)
+    
+    def test_edit_recipe(self):
+        self.helper_login()
+        self.helper_add_recipe()
+
+        # Find the edit button for the first recipe
+        edit_button = self.driver.find_element(By.ID, "edit-recipe-btn")
+        edit_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element_attribute(
+                (By.ID, "add"),
+                "class",
+                "active"
+            )
+        )
+
+        # Find the recipe fields
+        recipe_name_field = self.driver.find_element(By.ID, "recipe-name")
+        recipe_time_field = self.driver.find_element(By.ID, "recipe-time")
+        recipe_ingredients_field = self.driver.find_element(By.ID, "ingredient-input")
+        recipe_add_button = self.driver.find_element(By.ID, "add-ingredient-btn")
+        recipe_instructions_field = self.driver.find_element(By.ID, "recipe-instructions")
+
+        # Fill in the fields
+        recipe_name_field.clear()
+        recipe_name_field.send_keys("Edited Recipe")
+        recipe_time_field.clear()
+        recipe_time_field.send_keys("45")
+        recipe_ingredients_field.clear()
+        recipe_ingredients_field.send_keys("Edited1 50g")
+        recipe_add_button.click()
+        recipe_ingredients_field.send_keys("Edited2 40g")
+        recipe_add_button.click()
+        recipe_instructions_field.clear()
+        recipe_instructions_field.send_keys("Edited instructions")
+
+        # Submit the form
+        submit_button = self.driver.find_element(By.ID, "save-recipe-btn")
+        submit_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element_attribute(
+                (By.ID, "my-recipes-button"),
+                "class",
+                "active"
+            )
+        )
+
+        # Check if the recipe was edited successfully
+        recipe_title_field = self.driver.find_element(By.CLASS_NAME, "recipe-title")
+        self.assertEqual("Edited Recipe", recipe_title_field.text)
+    
+    def test_share_recipe(self):
+        self.helper_login()
+        self.helper_add_recipe()
+        self.helper_share_recipe()
+
+        self.assertTrue(True)
+    
+    def test_shareddd_recipe(self):
+        # User 1 Stuff
+        self.helper_login()
+        self.helper_add_recipe()
+        self.helper_share_recipe()
+        self.helper_logout()
+
+        # User 2 Stuff
+        self.helper_login("prebuilduser2", "prebuilduser2password")
+        mailbox_button = self.driver.find_element(By.ID, "mailbox-icon")
+        mailbox_button.click()
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element_attribute(
+                (By.ID, "mailbox-popup"),
+                "style",
+                "display: block;"
+            )
+        )
+
+        shared_recipe_name = self.driver.find_element(By.CLASS_NAME, "shared-recipe-name")
+        self.assertEqual("Test Recipe", shared_recipe_name.text)
+
 
 # Instructions to run the tests:
 # 1. Ensure your application is running locally (e.g., on http://localhost:5000).
