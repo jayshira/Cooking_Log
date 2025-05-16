@@ -191,6 +191,8 @@ class SeleniumTest(unittest.TestCase):
 
         return super().tearDown()
 
+# MORE SELENIUM TESTS HERE
+
 # Instructions to run the tests:
 # 1. Ensure your application is running locally (e.g., on http://localhost:5000).
 # 2. Run the tests using the command:
