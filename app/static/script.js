@@ -309,7 +309,7 @@ function renderRecipeCard(recipe) {
                 <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})" id="edit-recipe-btn">
                     <i class="fas fa-edit"></i> Edit
                 </button>
-                <a href="/start_cooking/${recipe.id}" class="btn btn-success btn-sm">
+                <a href="/start_cooking/${recipe.id}" class="btn btn-success btn-sm" id="start-cooking-btn">
                     <i class="fas fa-utensils"></i> Cook
                 </a>
                 <button class="btn btn-danger btn-sm" onclick="deleteRecipe(${recipe.id})">

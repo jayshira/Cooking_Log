@@ -317,6 +317,55 @@ class SeleniumTest(unittest.TestCase):
         shared_recipe_name = self.driver.find_element(By.CLASS_NAME, "shared-recipe-name")
         self.assertEqual("Test Recipe", shared_recipe_name.text)
     
+    def test_cooking_recipe(self):
+        self.helper_login()
+        self.helper_add_recipe()
+
+        # Find the cook button for the first recipe
+        cook_button = self.driver.find_element(By.ID, "start-cooking-btn")
+        cook_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.url_changes(localhost + "home")
+        )
+
+        start_timer_button = self.driver.find_element(By.ID, "start-timer-btn")
+        stop_timer_button = self.driver.find_element(By.ID, "stop-timer-btn")
+        reset_timer_button = self.driver.find_element(By.ID, "reset-timer-btn")
+
+        # Start, stop, and reset the timer check
+        start_timer_button.click()
+        stop_timer_button.click()
+        reset_timer_button.click()
+
+        self.driver.execute_script("document.getElementById('timer-display').innerText = '00:10:00';")
+        # five_stars_button = self.driver.find_element(By.ID, "star5")
+        # five_stars_button.click()
+
+        notes_field = self.driver.find_element(By.ID, "notes")
+        notes_field.send_keys("Test notes")
+
+        log_session_button = self.driver.find_element(By.ID, "log-session-btn")
+        log_session_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element_attribute(
+                (By.ID, "confirm-modal"),
+                "style",
+                "display: flex;"
+            )
+        )
+
+        confirm_button = self.driver.find_element(By.ID, "confirm-yes")
+        confirm_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.url_changes(self.driver.current_url))
+
+        # everything pass
+        self.assertTrue(True)
+        
+    
 
 
 # Instructions to run the tests:
