@@ -1,12 +1,9 @@
 # app/auth.py
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import User, db # Import User model and db instance from the app package
-from .forms import SignupForm, LoginForm # Using WTForms now :D
+from .models import User, db 
+from .forms import SignupForm, LoginForm
 
-# Create a Blueprint named 'auth'.
-# The url_prefix='/auth' was added during registration in __init__.py,
-# so all routes defined here will be prefixed with /auth.
 auth = Blueprint('auth', __name__)
 
 
@@ -25,9 +22,11 @@ def signup():
             db.session.commit()
             flash('Your account has been created! You can now log in.', 'success')
             return redirect(url_for('auth.login'))
-        except Exception as e:
+        except Exception as e: # More specific exception handling could be better
             db.session.rollback()
-            flash('An error occurred during registration.', 'danger')
+            # Log the error e for debugging
+            print(f"Error during signup: {e}") 
+            flash('An error occurred during registration. Please check your input or try a different username/email.', 'danger')
     
     return render_template('auth/signup.html', title='Sign Up', form=form)
 
@@ -39,21 +38,21 @@ def login():
     
     form = LoginForm()
     if form.validate_on_submit():
-        # Find user by either username or email
         user = User.query.filter((User.username == form.identifier.data) | 
                                  (User.email == form.identifier.data)).first()
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember.data)
             next_page = request.args.get('next')
+            # Ensure next_page is safe if you implement more complex redirects
             return redirect(next_page or url_for('main.home'))
         else:
-            flash('Login unsuccessful. Please check your credentials.', 'danger')
+            flash('Login unsuccessful. Please check your username/email and password.', 'danger') # More specific message
     
     return render_template('auth/login.html', title='Log In', form=form)
 
 
 @auth.route('/logout')
 def logout():
-    logout_user()
+    logout_user() # from flask_login
     flash('You have been logged out.', 'info')
-    return redirect(url_for('main.index')) #mainpage
+    return redirect(url_for('main.index')) # CORRECTED: Redirect to the public index page

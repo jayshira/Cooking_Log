@@ -6,79 +6,31 @@
     <title>Cooking: {{ recipe.name }} - KitchenLog</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <meta name="csrf-token" content="{{ csrf_token() }}"> {# Good to have for JS, even if form is standard post #}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
-        /* Specific styles for this page - kept from your version */
         .cooking-container { max-width: 1000px; margin: 20px auto; padding: 20px; }
         .recipe-details, .log-section { background-color: var(--white); border-radius: 8px; padding: 25px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        
-        /* Consistent h1/h2 styling as in view_recipe.html */
-        .cooking-container h1 { 
-            color: var(--primary-color); 
-            border-bottom: 2px solid var(--light-color); 
-            padding-bottom: 10px; 
-            margin-bottom: 20px; 
-            font-size: 2rem;
-        }
-        .log-section h2, .recipe-details h2 { 
-            color: var(--primary-color); 
-            border-bottom: 1px solid var(--light-color); 
-            padding-bottom: 8px; 
-            margin-top: 20px;
-            margin-bottom: 15px; 
-            font-size: 1.5rem;
-        }
-        .log-section h2:first-child, .recipe-details h2:first-child {
-             margin-top: 0;
-        }
-
+        .cooking-container h1 { color: var(--primary-color); border-bottom: 2px solid var(--light-color); padding-bottom: 10px; margin-bottom: 20px; font-size: 2rem; }
+        .log-section h2, .recipe-details h2 { color: var(--primary-color); border-bottom: 1px solid var(--light-color); padding-bottom: 8px; margin-top: 20px; margin-bottom: 15px; font-size: 1.5rem; }
+        .log-section h2:first-child, .recipe-details h2:first-child { margin-top: 0; }
         pre { background-color: #fdfdfd; padding: 15px; border-radius: 5px; border: 1px solid #eee; white-space: pre-wrap; word-wrap: break-word; font-size: 0.95em; max-height: 400px; overflow-y: auto; margin:0; }
         #timer-display { font-size: 2.5rem; font-weight: bold; color: var(--dark-color); display: block; margin-bottom: 15px; text-align: center; background-color: #f0f0f0; padding: 10px; border-radius: 5px;}
         .timer-controls button { margin-right: 10px; margin-bottom: 5px; }
         .log-form .form-group { margin-bottom: 15px; }
         .rating-stars label { cursor: pointer; font-size: 1.8rem; color: #ccc; transition: color 0.2s; }
         .rating-stars input[type="radio"] { display: none; }
-        .rating-stars input[type="radio"]:checked ~ label { color: #ffc107; } /* Following siblings */
-        .rating-stars label:hover,
-        .rating-stars label:hover ~ label { color: #ffca2c; } /* Hover effect */
+        .rating-stars input[type="radio"]:checked ~ label { color: #ffc107; }
+        .rating-stars label:hover, .rating-stars label:hover ~ label { color: #ffca2c; }
         .rating-stars { display: inline-block; direction: rtl; } 
         .rating-stars label { float: right; } 
-
-        /* Modal Styles (from your previous version) */
-        #confirm-modal {
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); 
-            z-index: 1000; 
-            justify-content: center; 
-            align-items: center;
-        }
-        #confirm-modal > div { /* Inner modal box */
-            background: white; 
-            padding: 25px 30px; 
-            border-radius: 8px; 
-            text-align: center; 
-            max-width: 400px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        #confirm-modal h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: var(--primary-color);
-            border-bottom: none; /* No border for modal title */
-            font-size: 1.4rem;
-        }
-        #confirm-modal p {
-            margin-bottom: 20px;
-            font-size: 1rem;
-            color: var(--grey);
-        }
-        #confirm-modal .modal-actions button {
-            margin: 0 5px;
-        }
-
+        #confirm-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        #confirm-modal > div { background: white; padding: 25px 30px; border-radius: 8px; text-align: center; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        #confirm-modal h3 { margin-top: 0; margin-bottom: 15px; color: var(--primary-color); border-bottom: none; font-size: 1.4rem; }
+        #confirm-modal p { margin-bottom: 20px; font-size: 1rem; color: var(--grey); }
+        #confirm-modal .modal-actions button { margin: 0 5px; }
+        #log-image-preview { max-width: 100%; max-height: 200px; display: none; border-radius: 5px; border: 1px solid #ddd; margin: 0 auto; } /* Centered preview */
+        #log-image-preview-container { text-align: center; margin-top: 10px; } /* Container for centering */
+        #remove-log-image-btn { display: none; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -87,25 +39,19 @@
              <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to My Kitchen</a>
         </div>
 
-        <!-- FLASH MESSAGES BLOCK -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="flash-messages" style="margin-bottom: 20px;">
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            {{ message }}
-                            {# Optional: <button type="button" class="close-alert" onclick="this.parentElement.style.display='none';">×</button> #}
-                        </div>
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
-        <!-- END FLASH MESSAGES BLOCK -->
 
         <h1><i class="fas fa-utensils"></i> Cooking: {{ recipe.name }}</h1>
 
         <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
-
             <div class="col-md-6" style="flex: 1; min-width: 300px;">
                 <div class="recipe-details">
                     <h2><i class="fas fa-list-ul"></i> Ingredients</h2>
@@ -142,7 +88,7 @@
                     <hr style="margin: 25px 0;">
 
                     <h2><i class="fas fa-clipboard-list"></i> Log Your Session</h2>
-                    <form id="log-form" class="log-form" action="{{ url_for('main.log_cooking_session', recipe_id=recipe.id) }}" method="POST">
+                    <form id="log-form" class="log-form" action="{{ url_for('main.log_cooking_session', recipe_id=recipe.id) }}" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" id="duration_seconds" name="duration_seconds" value="0">
 
@@ -161,6 +107,15 @@
                                 <input type="radio" id="star1" name="rating" value="1" /><label for="star1" title="1 star">★</label>
                             </div>
                         </div>
+                        
+                        <div class="form-group">
+                            <label for="log_image" class="form-label"><i class="fas fa-camera"></i> Add Image (Optional)</label>
+                            <input type="file" class="form-control" id="log_image" name="log_image" accept="image/*">
+                            <div id="log-image-preview-container">
+                                <img id="log-image-preview" src="#" alt="Image Preview"/>
+                                <button type="button" id="remove-log-image-btn" class="btn btn-sm btn-outline-secondary">Remove Image</button>
+                            </div>
+                        </div>
 
                         <div class="form-group">
                             <label for="notes" class="form-label"><i class="fas fa-pencil-alt"></i> Session Notes (Optional)</label>
@@ -174,9 +129,8 @@
         </div>
     </div>
 
-    <!-- Confirmation Modal (from your previous version) -->
     <div id="confirm-modal">
-        <div> {# Inner modal box #}
+        <div>
             <h3>Confirm Session Log</h3>
             <p>Are you sure you want to log this cooking session now?</p>
             <div class="modal-actions">
@@ -194,10 +148,13 @@
             const resetBtn = document.getElementById('reset-timer-btn');
             const durationInput = document.getElementById('duration_seconds');
             const logForm = document.getElementById('log-form');
-            
             const confirmModal = document.getElementById('confirm-modal');
             const confirmYesBtn = document.getElementById('confirm-yes');
             const confirmNoBtn = document.getElementById('confirm-no');
+
+            const logImageInput = document.getElementById('log_image');
+            const logImagePreview = document.getElementById('log-image-preview');
+            const removeLogImageBtn = document.getElementById('remove-log-image-btn');
 
             let timerInterval = null;
             let startTime = null;
@@ -208,9 +165,7 @@
                 const hours = Math.floor(totalSeconds / 3600);
                 const minutes = Math.floor((totalSeconds % 3600) / 60);
                 const seconds = totalSeconds % 60;
-                return [hours, minutes, seconds]
-                    .map(v => v < 10 ? "0" + v : v)
-                    .join(":");
+                return [hours, minutes, seconds].map(v => v < 10 ? "0" + v : v).join(":");
             }
 
             function updateTimer() {
@@ -218,7 +173,7 @@
                 const now = Date.now();
                 elapsedSeconds = Math.floor((now - startTime) / 1000);
                 timerDisplay.textContent = formatTime(elapsedSeconds);
-                durationInput.value = elapsedSeconds; // Continuously update hidden input
+                durationInput.value = elapsedSeconds;
             }
 
             function startTimer() {
@@ -226,62 +181,68 @@
                 running = true;
                 startTime = Date.now() - (elapsedSeconds * 1000); 
                 timerInterval = setInterval(updateTimer, 1000);
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                resetBtn.disabled = true; 
+                startBtn.disabled = true; stopBtn.disabled = false; resetBtn.disabled = true; 
             }
 
             function stopTimer() {
                 if (!running) return;
-                running = false;
-                clearInterval(timerInterval);
-                timerInterval = null;
-                updateTimer(); // Final update to display and hidden input
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                resetBtn.disabled = false; 
+                running = false; clearInterval(timerInterval); timerInterval = null;
+                updateTimer(); 
+                startBtn.disabled = false; stopBtn.disabled = true; resetBtn.disabled = false; 
             }
 
             function resetTimer() {
-                if (running) stopTimer(); // Stop if running before reset
-                elapsedSeconds = 0;
-                startTime = null; // Reset start time
-                durationInput.value = 0; 
+                if (running) stopTimer();
+                elapsedSeconds = 0; startTime = null; durationInput.value = 0; 
                 timerDisplay.textContent = formatTime(0);
-                resetBtn.disabled = true; 
-                stopBtn.disabled = true;
-                startBtn.disabled = false;
+                resetBtn.disabled = true; stopBtn.disabled = true; startBtn.disabled = false;
             }
 
             startBtn.addEventListener('click', startTimer);
             stopBtn.addEventListener('click', stopTimer);
             resetBtn.addEventListener('click', resetTimer);
 
+            if (logImageInput && logImagePreview && removeLogImageBtn) {
+                logImageInput.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            logImagePreview.src = e.target.result;
+                            logImagePreview.style.display = 'block';
+                            removeLogImageBtn.style.display = 'inline-block';
+                        }
+                        reader.readAsDataURL(file);
+                    } else {
+                        logImagePreview.src = '#';
+                        logImagePreview.style.display = 'none';
+                        removeLogImageBtn.style.display = 'none';
+                    }
+                });
+                removeLogImageBtn.addEventListener('click', function() {
+                    logImageInput.value = ''; 
+                    logImagePreview.src = '#';
+                    logImagePreview.style.display = 'none';
+                    removeLogImageBtn.style.display = 'none';
+                });
+            }
+
             logForm.addEventListener('submit', (event) => {
-                event.preventDefault(); // Always prevent default to show modal
-                if (running) {
-                    // If timer is running, modal will ask. Update duration just in case.
-                    durationInput.value = elapsedSeconds;
-                } else if (startTime) { // Timer was used but stopped
-                    durationInput.value = elapsedSeconds;
-                } else { // Timer was never started
-                    durationInput.value = 0; // Or set to null/empty depending on backend
-                }
+                event.preventDefault(); 
+                if (running) durationInput.value = elapsedSeconds;
+                else if (startTime) durationInput.value = elapsedSeconds;
+                else durationInput.value = 0; 
                 confirmModal.style.display = 'flex';
             });
         
             confirmYesBtn.addEventListener('click', () => {
                 confirmModal.style.display = 'none';
-                if (running) {
-                    stopTimer(); // Stop the timer if it was running when modal was shown
-                }
-                // Duration input should already be up-to-date from stopTimer or the submit listener
-                logForm.submit(); // Submit the form
+                if (running) stopTimer(); 
+                logForm.submit(); 
             });
 
             confirmNoBtn.addEventListener('click', () => {
                 confirmModal.style.display = 'none';
-                // User chose not to log yet, timer might still be running if it was.
             });
         });
     </script>

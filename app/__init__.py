@@ -1,5 +1,4 @@
 # app/__init__.py
-
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -12,42 +11,38 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 migrate = Migrate()
 
-login_manager.login_view = 'auth.login'
-login_manager.login_message_category = 'info'
+login_manager.login_view = 'auth.login' # Route name for the login view
+login_manager.login_message_category = 'info' # Bootstrap category for the flash message
 
 @login_manager.user_loader
 def load_user(user_id):
-    from .models import User
+    from .models import User # Import here to avoid circular dependency
     try:
-        return User.query.get(int(user_id))
+        # CORRECTED: Use the newer db.session.get()
+        return db.session.get(User, int(user_id))
     except (ValueError, TypeError):
+        # Handle cases where user_id might not be a valid integer
         return None
 
-def create_app(config_class=Config):
+def create_app(config_class=Config): # Default to base Config
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Initialize Flask extensions
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
-    migrate.init_app(app, db) # <-- Initialize Migrate here, passing app and db
+    # Initialize Migrate here, passing app and db
+    migrate.init_app(app, db) 
 
-    # Import and register Blueprints
-    from .routes import main as main_blueprint
-    app.register_blueprint(main_blueprint)
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
-    # Database Initialization within application context - REMOVE create_all
+    from .routes import main as main_blueprint
+    app.register_blueprint(main_blueprint)
+    
+    # Removed the db.create_all() block as migrations handle this.
+    # Ensure models are imported so Flask-Migrate can see them.
     with app.app_context():
-        # Import models here AFTER db is initialized and within context
-        from . import models # noqa: F401
-
-        # REMOVE OR COMMENT OUT THE FOLLOWING LINES:
-        # print("Ensuring database tables exist...")
-        # db.create_all() # <-- REMOVE THIS LINE
-        # print("Database tables checked/created.")
-        pass # Keep the app_context block if needed for other setup later
+        from . import models # noqa: F401 Ensures models are registered with SQLAlchemy
 
     return app
