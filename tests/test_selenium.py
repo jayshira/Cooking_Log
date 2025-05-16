@@ -1,10 +1,9 @@
 import unittest
-import multiprocessing
 from threading import Thread
 
 from config import TestConfig
 from app import db, create_app
-from app.models import User, Recipe
+from app.models import User
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
