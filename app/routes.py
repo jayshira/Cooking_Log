@@ -546,29 +546,45 @@ def create_shared_recipe():
 def get_my_shared_recipes():
     try:
         user_id = current_user.id
-        shared_recipes_data = db.session.query(
+
+        # Query to get shared recipes along with recipe name and sharer's info
+        shared_recipes_query = (
+            db.session.query(
                 SharedRecipe.id,
                 SharedRecipe.recipe_id,
-                SharedRecipe.sharer_name,
+                SharedRecipe.sharer_name,  # Keep for display
                 SharedRecipe.date_shared,
-                Recipe.name.label('recipe_name') 
-            ).join(Recipe, SharedRecipe.recipe_id == Recipe.id)\
-            .filter(SharedRecipe.receiver_id == user_id)\
-            .order_by(SharedRecipe.date_shared.desc())\
+                Recipe.name.label('recipe_name'),
+                User.profile_picture_url.label('sharer_pfp_url'),  # Get sharer's PFP
+                User.username.label('sharer_username_for_initial')  # Get username for initial if no PFP
+            )
+            .join(Recipe, SharedRecipe.recipe_id == Recipe.id)
+            .join(User, User.username == SharedRecipe.sharer_name)  # Join User table based on sharer_name
+            .filter(SharedRecipe.receiver_id == user_id)
+            .order_by(SharedRecipe.date_shared.desc())
             .all()
+        )
+        # Note: Joining on username assumes usernames are unique and don't change often.
+        # A sharer_id foreign key in SharedRecipe would be more robust.
 
-        results = [
-            {
+        results = []
+        for sr in shared_recipes_query:
+            results.append({
                 "id": sr.id,
                 "recipe_id": sr.recipe_id,
-                "sharer_name": sr.sharer_name,
+                "sharer_name": sr.sharer_name, # The name of the user who shared it
                 "date_shared": sr.date_shared.isoformat(), 
-                "recipe_name": sr.recipe_name
-            } for sr in shared_recipes_data
-        ]
+                "recipe_name": sr.recipe_name,
+                "sharer_pfp_url": sr.sharer_pfp_url, # Sharer's profile picture URL
+                "sharer_username_for_initial": sr.sharer_username_for_initial # For creating default initial
+            })
+        
         return jsonify(results), 200
     except Exception as e:
         print(f"Error fetching shared recipes: {e}")
+        # Consider logging the full traceback for e
+        # import traceback
+        # print(traceback.format_exc())
         return jsonify({"error": "Failed to fetch shared recipes"}), 500
 
 
