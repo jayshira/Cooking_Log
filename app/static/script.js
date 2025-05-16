@@ -3,6 +3,12 @@
 // Global variables for charts
 let topRecipesChart = null;
 let frequencyChart = null;
+let topRatedChart = null;
+let chartStates = {
+    'top-recipes': 'all-time',
+    'frequency': 'monthly',
+    'top-rated': 'all-time'
+};
 let currentRecipes = []; // Cache recipes locally for search/share dropdowns
 
 // --- API Helper Functions ---
@@ -742,6 +748,52 @@ function displaySharePreview(recipeId) {
 
 // --- Stats and Charts (uses local cache) ---
 
+// Add toggle function
+function toggleChart(chartType) {
+    const state = chartStates[chartType];
+    const newState = state === 'all-time' ? 'this-month' : 'all-time';
+    
+    if (chartType === 'frequency') {
+        if (state === 'weekly') {
+            document.getElementById('frequency-title').textContent = 'Monthly Cooking Frequency';
+        } else {
+            document.getElementById('frequency-title').textContent = 'This Week\'s Cooking Frequency';
+        }
+        
+        chartStates[chartType] = state === 'monthly' ? 'weekly' : 'monthly';    
+    } else {
+        chartStates[chartType] = newState;
+    }
+
+    // Update button text
+    const button = event.target.closest('button');
+    if (button) {
+        const toggleText = chartType === 'frequency' ? 
+            (chartStates[chartType] === 'monthly' ? 'Show This Week' : 'Show Monthly View') :
+            (chartStates[chartType] === 'all-time' ? 'Show This Month' : 'Show All Time');
+        button.innerHTML = `<i class="fas fa-exchange-alt"></i> ${toggleText}`;
+    }
+
+    // Update charts
+    if (chartType === 'top-recipes') {
+        const data = chartStates[chartType] === 'all-time' ? 
+            LOG_STATS_DATA.top_recipes_data : 
+            LOG_STATS_DATA.top_recipes_this_month_data;
+        updateTopRecipesChart(data);
+    } else if (chartType === 'frequency') {
+        if (chartStates[chartType] === 'monthly') {
+            updateMonthlyFrequencyChart(LOG_STATS_DATA.monthly_frequency_data);
+        } else {
+            updateWeeklyFrequencyChart(LOG_STATS_DATA.weekly_frequency_data);
+        }
+    } else if (chartType === 'top-rated') {
+        const data = chartStates[chartType] === 'all-time' ? 
+            LOG_STATS_DATA.top_rated_data : 
+            LOG_STATS_DATA.top_rated_this_month_data;
+        updateTopRatedChart(data);
+    }
+}
+
 function updateStats() {
     // Use the global LOG_STATS_DATA parsed from the template
     const stats = LOG_STATS_DATA;
@@ -782,6 +834,9 @@ function updateStats() {
     // Update the charts using the data from LOG_STATS_DATA
     if (document.getElementById('top-recipes-chart') && stats.top_recipes_data) {
         updateTopRecipesChart(stats.top_recipes_data);
+    }
+    if (document.getElementById('top-rated-chart') && LOG_STATS_DATA.top_rated_data) {
+        updateTopRatedChart(LOG_STATS_DATA.top_rated_data);
     }
     if (document.getElementById('frequency-chart') && stats.monthly_frequency_data) {
         updateMonthlyFrequencyChart(stats.monthly_frequency_data);
@@ -879,11 +934,8 @@ function updateTopRecipesChart(topRecipesData) {
                 }
             },
             plugins: {
-                legend: { display: false }, // No legend needed for single dataset
+                legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'var(--dark-color)',
-                    titleColor: 'var(--white)',
-                    bodyColor: 'var(--white)',
                     callbacks: {
                         label: function(context) {
                             return ` Logs: ${context.raw || 0}`;
@@ -939,9 +991,6 @@ function updateMonthlyFrequencyChart(frequencyData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                     backgroundColor: 'var(--dark-color)',
-                     titleColor: 'var(--white)',
-                     bodyColor: 'var(--white)',
                      callbacks: {
                         title: function(context) {
                              // Format title e.g., "October 2023"
@@ -998,6 +1047,119 @@ function updateTimeChart(recipes) {
             plugins: {
                 legend: { display: false },
                 tooltip: { backgroundColor: 'var(--dark-color)', titleColor: 'var(--white)', bodyColor: 'var(--white)' }
+            }
+        }
+    });
+}
+
+function updateWeeklyFrequencyChart(weeklyData) {
+    const ctx = document.getElementById('frequency-chart')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = weeklyData.map(item => {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return days[item.day - 1]; // Adjust for 1-based index from database
+    });
+    const data = weeklyData.map(item => item.count);
+
+    if (frequencyChart) {
+        frequencyChart.destroy();
+    }
+
+    frequencyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Sessions Logged',
+                data: data,
+                backgroundColor: '#FF7B54',
+                borderColor: '#FF7B54B3',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, color: 'var(--grey)' },
+                    grid: { color: '#eee' }
+                },
+                x: {
+                    ticks: { color: 'var(--grey)' },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            const dayIndex = context[0].label;
+                            return ` ${dayIndex}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Add new chart update functions
+function updateTopRatedChart(topRatedData) {
+    const ctx = document.getElementById('top-rated-chart')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = topRatedData.map(item => item.name);
+    const data = topRatedData.map(item => item.rating);
+
+    if (topRatedChart) {
+        topRatedChart.destroy();
+    }
+
+    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; // Use first 5 theme colors
+
+    topRatedChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Average Rating',
+                data: data,
+                backgroundColor: backgroundColors.slice(0, labels.length),
+                borderColor: backgroundColors.map(c => c + 'B3'),
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    max: 5,
+                    min: 0,
+                    ticks: { color: 'var(--grey)' },
+                    grid: { color: '#eee' }
+                },
+                y: {
+                    ticks: { color: 'var(--grey)' },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` Rating: ${context.raw?.toFixed(1) || 0} ★`;
+                        }
+                    }
+                }
             }
         }
     });
