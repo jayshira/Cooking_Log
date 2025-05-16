@@ -527,7 +527,7 @@ def add_to_whitelist(recipe_id):
 
     current_recipe_whitelist = list(recipe.whitelist) if recipe.whitelist is not None else []
     if user_to_add.id in current_recipe_whitelist:
-        return jsonify({"message": f"User '{user_to_add.username}' is already in the whitelist"}), 200 
+        return jsonify({"message": f"User '{user_to_add.username}' is already in the whitelist for '{recipe.name}'."}), 200 
     
     current_recipe_whitelist.append(user_to_add.id)
     recipe.whitelist = current_recipe_whitelist 
@@ -549,8 +549,8 @@ def add_to_whitelist(recipe_id):
             db.session.add(new_shared_notification)
             db.session.commit() 
             
-        shared_url = url_for('main.view_recipe', recipe_id=recipe.id, _external=True)
-        return jsonify({"message": f"Recipe '{recipe.name}' access granted to {user_to_add.username}. Link: {shared_url}"}), 200
+        # Simplified message
+        return jsonify({"message": f"Recipe '{recipe.name}' shared with {user_to_add.username}."}), 200
     except Exception as e:
         db.session.rollback(); print(f"Error updating whitelist/shared_recipe for recipe {recipe.id}: {e}")
         return jsonify({"error": "Failed to update whitelist due to a server error"}), 500

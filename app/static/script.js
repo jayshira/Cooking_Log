@@ -1227,77 +1227,9 @@ function handleFileChange(fileInput) {
     }
 }
 
-// Share recipe via different platforms
-function shareRecipe(platform) {
-    const shareRecipeSelect = document.getElementById('share-recipe');
-    if (!shareRecipeSelect) return;
-
-    const recipeId = shareRecipeSelect.value;
-    if (!recipeId) {
-        alert('Please select a recipe to share first.');
-        return;
-    }
-    // Find recipe in local cache for sharing details
-    const recipe = currentRecipes.find(r => r.id == recipeId);
-    if (!recipe) {
-        alert('Selected recipe details not found.');
-        return;
-    }
-
-    const shareText = `Check out my recipe for "${recipe.name}"! Prep time: ${recipe.time} mins. Category: ${recipe.category}.`;
-    const appUrl = window.location.origin; // Base URL of the app
-    // Construct a more specific URL if you have public recipe pages later
-    // const recipeUrl = `${appUrl}/recipe/${recipe.id}`; // Example
-    const recipeUrl = appUrl; // For now, just link to the app
-
-    const shareSubject = `My KitchenLog Recipe: ${recipe.name}`;
-    let ingredientsList = Array.isArray(recipe.ingredients) ? recipe.ingredients.join('\n- ') : recipe.ingredients;
-    const shareBody = `${shareText}\n\nIngredients:\n- ${ingredientsList}\n\nInstructions:\n${recipe.instructions}\n\nShared from my KitchenLog: ${recipeUrl}`;
-    let shareUrl = '';
-
-    switch (platform) {
-        case 'facebook':
-            // FB Sharer needs a real URL to scrape, using appUrl for now
-            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipeUrl)}"e=${encodeURIComponent(shareText)}`;
-            break;
-        case 'twitter':
-            shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(recipeUrl)}`;
-            break;
-        case 'whatsapp':
-            // WhatsApp Web/App link
-            shareUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' Shared from KitchenLog: ' + recipeUrl)}`;
-            break;
-        case 'email':
-            shareUrl = `mailto:?subject=${encodeURIComponent(shareSubject)}&body=${encodeURIComponent(shareBody)}`;
-            break;
-        default: return;
-    }
-    if (shareUrl) {
-        window.open(shareUrl, '_blank', 'noopener,noreferrer,width=600,height=400');
-    }
-}
-
-function closeAlert() {
-    const alertBox = document.querySelector('.custom-alert');
-    if (alertBox) {
-        alertBox.remove();
-    }
-}
+// Share recipe via different platforms -- deleted 
 
 // Shared Recipes Popup Helper Functions
-async function fetchSharedRecipes() {
-    try {
-        const response = await fetch('/api/shared_recipes/my');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
-    } catch (error) {
-        console.error("Error fetching shared recipes:", error);
-        return [];
-    }
-}
-
 async function fetchSharedRecipes() {
     try {
         const response = await fetch('/api/shared_recipes/my');
@@ -1521,13 +1453,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }); // End of search input listener
     }
 
-    // Share recipe selection listener
+    // Share recipe selection listener & user search input listener for clearing response message
     const shareRecipeSelect = document.getElementById('share-recipe');
+    const userSearchInputForShare = document.getElementById("user-search"); // Also known as 'input' below
+    const responseMessageDivForShare = document.getElementById('response-message');
+
     if (shareRecipeSelect) {
         shareRecipeSelect.addEventListener('change', function() {
             displaySharePreview(this.value); // Ensure displaySharePreview exists
+            if (responseMessageDivForShare) { // Clear message on recipe change
+                responseMessageDivForShare.textContent = '';
+                responseMessageDivForShare.style.color = 'var(--grey)'; // Reset color
+            }
         });
     }
+    if (userSearchInputForShare) {
+        userSearchInputForShare.addEventListener('input', function() {
+            if (responseMessageDivForShare) { // Clear message on user typing
+                responseMessageDivForShare.textContent = '';
+                responseMessageDivForShare.style.color = 'var(--grey)';
+            }
+            // The existing user search suggestion logic will also run
+        });
+    }
+
 
     // Initial load of recipes (for the logged-in user)
     // Check if the recipe list container exists before loading
@@ -1536,120 +1485,158 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // share recipe user search listeners
-    const input = document.getElementById("user-search");
+    const input = document.getElementById("user-search"); // Same as userSearchInputForShare
     const suggestions = document.getElementById("suggestions");
     let debounce;
 
-    input.addEventListener("input", () => {
-    const q = input.value.trim();
-    clearTimeout(debounce);
-    if (q.length < 2) {
-        suggestions.innerHTML = "";
-        return;
-    }
-    debounce = setTimeout(() => {
-        fetch(`/users/search?q=${encodeURIComponent(q)}`)
-        .then(res => res.json())
-        .then(usernames => {
+    if (input && suggestions) { // Check if elements exist
+        input.addEventListener("input", () => { // This listener is already clearing responseMessageDivForShare
+        const q = input.value.trim();
+        clearTimeout(debounce);
+        if (q.length < 2) {
             suggestions.innerHTML = "";
-            usernames.forEach(username => {
-            const li = document.createElement("li");
-            // display the string itself
-            li.textContent = username;
-            li.addEventListener("click", () => {
-                // fill the input with that string
-                input.value = username;
-                suggestions.innerHTML = "";
-            });
-            suggestions.appendChild(li);
-            });
-        })
-        .catch(console.error);
-    }, 300);
-    });
-
-    document.addEventListener("click", e => {
-    if (!input.contains(e.target)) {
-        suggestions.innerHTML = "";
-    }
-    });
-
-    const whitelist_button = document.getElementById("add-to-whitelist-btn");
-    whitelist_button.addEventListener("click", () => {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        const recipe_id = document.getElementById('share-recipe').value;
-        const username = input.value.trim();
-
-        if (!input.value) {
-            alert("Please select a user first.");
             return;
         }
-        console.log(input.value);
-        
-        fetch(`/recipes/${recipe_id}/whitelist`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken
-            },
-            body: JSON.stringify({ username: username })
-        })
-        .then(res => res.json())
-        .then(data => {
-            // Get the message from the response
-            const message = data.message;
-            
-            // Display the message to the user
-            document.getElementById('response-message').textContent = message;
-            input.value = "";
-        })
-        .catch(err => {
-            console.error("Error adding to whitelist:", err);
-            alert("Error: Failed to add user to whitelist.");
-        });
-
-        fetch('/api/shared_recipes', {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken
-            },
-            body: JSON.stringify({
-                receiver_name: username,
-                recipe_id: recipe_id,
+        debounce = setTimeout(() => {
+            fetch(`/users/search?q=${encodeURIComponent(q)}`)
+            .then(res => res.json())
+            .then(usernames => {
+                suggestions.innerHTML = "";
+                usernames.forEach(username => {
+                const li = document.createElement("li");
+                li.textContent = username;
+                li.addEventListener("click", () => {
+                    input.value = username;
+                    suggestions.innerHTML = "";
+                });
+                suggestions.appendChild(li);
+                });
             })
+            .catch(console.error);
+        }, 300);
         });
 
-    });
+        document.addEventListener("click", e => {
+            if (!input.contains(e.target) && !suggestions.contains(e.target)) { 
+                suggestions.innerHTML = "";
+            }
+        });
+    }
+
+
+    const whitelist_button = document.getElementById("add-to-whitelist-btn");
+    // responseMessageDivForShare is already defined
+    
+    if (whitelist_button && input && responseMessageDivForShare) { 
+        whitelist_button.addEventListener("click", () => {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const recipe_id_element = document.getElementById('share-recipe');
+            
+            // Clear previous message before new attempt
+            responseMessageDivForShare.textContent = '';
+            responseMessageDivForShare.style.color = 'var(--grey)';
+
+
+            if (!recipe_id_element) {
+                console.error("Share recipe select element not found.");
+                responseMessageDivForShare.textContent = "Error: Recipe selection not found.";
+                responseMessageDivForShare.style.color = 'var(--danger-text)';
+                return;
+            }
+            const recipe_id = recipe_id_element.value;
+            const username = input.value.trim();
+
+            if (!recipe_id) {
+                responseMessageDivForShare.textContent = "Please select a recipe to share first.";
+                responseMessageDivForShare.style.color = 'var(--warning-text)';
+                return;
+            }
+
+            if (!username) {
+                responseMessageDivForShare.textContent = "Please enter or select a user to share with.";
+                responseMessageDivForShare.style.color = 'var(--warning-text)';
+                return;
+            }
+            
+            whitelist_button.disabled = true; // Disable button
+            whitelist_button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sharing...';
+
+
+            fetch(`/recipes/${recipe_id}/whitelist`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken
+                },
+                body: JSON.stringify({ username: username })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    return res.json().then(errData => {
+                        let err = new Error(errData.error || `HTTP error! status: ${res.status}`);
+                        err.data = errData;
+                        throw err;
+                    });
+                }
+                return res.json();
+            })
+            .then(data => {
+                responseMessageDivForShare.textContent = data.message;
+                responseMessageDivForShare.style.color = 'var(--success-text)';
+                input.value = ""; // Clear user search input on success
+            })
+            .catch(err => {
+                console.error("Error adding to whitelist:", err);
+                responseMessageDivForShare.textContent = err.message || "Error: Failed to share recipe.";
+                responseMessageDivForShare.style.color = 'var(--danger-text)';
+            })
+            .finally(() => {
+                whitelist_button.disabled = false; // Re-enable button
+                whitelist_button.innerHTML = 'Add to Whitelist';
+            });
+        });
+    }
+
 
     // Mailbox popup initialization
     const mailboxIcon = document.querySelector('.mailbox-icon');
     const mailboxPopup = document.getElementById('mailbox-popup');
     const closePopup = document.getElementById('close-popup');
 
-    mailboxIcon.addEventListener('click', function(e) {
-        e.stopPropagation();
-        mailboxPopup.style.display = 'block';
-        displaySharedRecipes();
-    });
+    if (mailboxIcon && mailboxPopup && closePopup) { 
+        mailboxIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isVisible = mailboxPopup.style.display === 'block';
+            mailboxPopup.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible) {
+                 displaySharedRecipes();
+            }
+        });
 
-    closePopup.addEventListener('click', function() {
-        mailboxPopup.style.display = 'none';
-    });
-
-    document.addEventListener('click', function(e) {
-        if (!mailboxPopup.contains(e.target) && e.target !== mailboxIcon) {
+        closePopup.addEventListener('click', function() {
             mailboxPopup.style.display = 'none';
-        }
-    });
+        });
+
+        document.addEventListener('click', function(e) {
+            if (mailboxPopup.style.display === 'block' && // Only act if popup is visible
+                !mailboxPopup.contains(e.target) && 
+                e.target !== mailboxIcon && 
+                !mailboxIcon.contains(e.target)
+            ) {
+                mailboxPopup.style.display = 'none';
+            }
+        });
+    }
     
     // MISCELLANEOUS STUFF  
-    document.getElementById('recipe-time').addEventListener('keypress', function(e) {
-        // Allow only numbers and prevent other characters
-        if (!/\d/.test(String.fromCharCode(e.charCode))) {
-            e.preventDefault();
-        }
-    });
+    const recipeTimeInput = document.getElementById('recipe-time');
+    if (recipeTimeInput) { 
+        recipeTimeInput.addEventListener('keypress', function(e) {
+            if (!/\d/.test(String.fromCharCode(e.charCode))) {
+                e.preventDefault();
+            }
+        });
+    }
 
 }); // End DOMContentLoaded
 
