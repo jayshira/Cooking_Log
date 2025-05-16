@@ -406,7 +406,7 @@ async function handleFormSubmit(event) {
     const name = document.getElementById('recipe-name').value.trim();
     const category = document.getElementById('recipe-category').value;
     const timeInput = document.getElementById('recipe-time').value;
-    const ingredientsText = document.getElementById('recipe-ingredients').value.trim();
+    // const ingredientsText = document.getElementById('recipe-ingredients').value.trim();
     const instructions = document.getElementById('recipe-instructions').value.trim();
     const imageInput = document.getElementById('recipe-image');
 
@@ -416,7 +416,11 @@ async function handleFormSubmit(event) {
     const time = parseInt(timeInput, 10);
     // ... more validation ...
 
-    const ingredientsList = ingredientsText.split(/[\n,]+/).map(i => i.trim()).filter(i => i);
+    // const ingredientsList = ingredientsText.split(/[\n,]+/).map(i => i.trim()).filter(i => i);
+
+    const ingredientsList = Array.from(
+        document.querySelectorAll('#ingredient-list li span')
+    ).map(span => span.textContent.trim());
 
     const form = document.getElementById('recipe-form');
     const isEditing = form.dataset.editingId;
@@ -625,20 +629,35 @@ function editRecipe(id) {
         return;
     }
 
+    switchTab('add');
+
     document.getElementById('recipe-name').value = recipe.name;
     document.getElementById('recipe-category').value = recipe.category;
     document.getElementById('recipe-time').value = recipe.time;
-    document.getElementById('recipe-ingredients').value = Array.isArray(recipe.ingredients) ? 
-        recipe.ingredients.join('\n') : recipe.ingredients;
     document.getElementById('recipe-instructions').value = recipe.instructions;
+
+    // Clear existing ingredients and populate new ones
+    ingredients = Array.isArray(recipe.ingredients) ? 
+        [...recipe.ingredients] : 
+        [];
+    renderList();
 
     document.getElementById('recipe-form').dataset.editingId = id;
 
+    // Update form header and button
     document.querySelector('#add h2').innerHTML = '<i class="fas fa-edit"></i> Edit Recipe';
-    document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Update Recipe';
+    document.getElementById('add-recipe-button').textContent = 'Edit Recipe';
+    const submitBtn = document.querySelector('#add button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-save"></i> Update Recipe';
 
+    // Add event listener to cancel when switching tabs
+    document.getElementById('my-recipes-button').addEventListener('click', cancelEdit);
+    document.getElementById('add-recipe-button').addEventListener('click', cancelEdit);
+    document.getElementById('recipe-stats-button').addEventListener('click', cancelEdit);
+    document.getElementById('share-recipe-button').addEventListener('click', cancelEdit);
+
+    // Add cancel button if missing
     if (!document.getElementById('cancel-edit-btn')) {
-        const submitBtn = document.querySelector('#add button[type="submit"]');
         const cancelBtn = document.createElement('button');
         cancelBtn.type = 'button';
         cancelBtn.id = 'cancel-edit-btn';
@@ -647,8 +666,6 @@ function editRecipe(id) {
         cancelBtn.onclick = cancelEdit;
         submitBtn.insertAdjacentElement('afterend', cancelBtn);
     }
-
-    switchTab('add');
 }
 
 // Cancel edit mode
@@ -656,18 +673,23 @@ function cancelEdit() {
     const form = document.getElementById('recipe-form');
     delete form.dataset.editingId;
     form.reset();
+    
+    // Clear ingredients
+    ingredients = [];
+    renderList();
 
     document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
+    document.getElementById('add-recipe-button').textContent = 'Add Recipe';
     document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+
+    // Remove event after being cancelled
+    document.getElementById('my-recipes-button').removeEventListener('click', cancelEdit);
+    document.getElementById('add-recipe-button').removeEventListener('click', cancelEdit);
+    document.getElementById('recipe-stats-button').removeEventListener('click', cancelEdit);
+    document.getElementById('share-recipe-button').removeEventListener('click', cancelEdit);
 
     const cancelBtn = document.getElementById('cancel-edit-btn');
     if (cancelBtn) cancelBtn.remove();
-
-    const fileUploadStatus = document.getElementById('file-upload-status');
-    if (fileUploadStatus) {
-        fileUploadStatus.textContent = '';
-        fileUploadStatus.className = '';
-    }
 }
 
 // Override default alert
@@ -1392,6 +1414,22 @@ document.addEventListener('DOMContentLoaded', function() {
                      console.log('Updating stats for tab:', tabId); // For debugging
                      updateStats(); // Populate stats and render charts
                  }
+                  if (tabId === 'add') {
+                    const form = document.getElementById('recipe-form');
+                    form.reset();
+                    delete form.dataset.editingId;
+
+                    if (typeof ingredients !== 'undefined') {
+                        ingredients.length = 0;
+                        renderList();
+                    }
+
+                    document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
+                    document.querySelector('#add button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+
+                    const cancelBtn = document.getElementById('cancel-edit-btn');
+                    if (cancelBtn) cancelBtn.remove();
+                }
              } else {
                   console.warn(`Tab content with ID "${tabId}" not found.`);
              }
@@ -1614,3 +1652,48 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 }); // End DOMContentLoaded
+
+// --- Ingredient Input ---
+let ingredients = [];
+
+function updateHidden() {
+  const hiddenInput = document.getElementById('ingredients-hidden');
+  hiddenInput.value = ingredients.join(',');
+}
+
+function renderList() {
+  const listEl = document.getElementById('ingredient-list');
+  listEl.innerHTML = '';
+  ingredients.forEach((item, idx) => {
+    const li = document.createElement('li');
+    const span = document.createElement('span');
+    span.textContent = item;
+    li.appendChild(span);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    delBtn.addEventListener('click', () => {
+      ingredients.splice(idx, 1);
+      renderList();
+    });
+
+    li.appendChild(delBtn);
+    listEl.appendChild(li);
+  });
+  updateHidden();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ingredientInput   = document.getElementById('ingredient-input');
+  const addBtn            = document.getElementById('add-ingredient-btn');
+
+  addBtn.addEventListener('click', () => {
+    const val = ingredientInput.value.trim();
+    if (!val) return;
+    ingredients.push(val);
+    ingredientInput.value = '';
+    ingredientInput.focus();
+    renderList();
+  });
+});

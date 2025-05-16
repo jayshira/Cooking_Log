@@ -10,6 +10,7 @@
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     </head>
 <body>
     <header>
@@ -112,13 +113,23 @@
                  <form id="recipe-form">
                      <!-- Form content remains the same -->
                      <div class="form-group">
-                         <label for="recipe-name">Recipe Name</label>
+
+                         <label for="recipe-name">
+                            Recipe Name
+                            <i class="fas fa-info-circle info-icon" title="Enter a title for your recipe."></i>
+                         </label>
                          <input type="text" id="recipe-name" required>
                      </div>
                      <div class="form-group">
-                         <label for="recipe-category">Category</label>
+                         <label for="recipe-category">
+                            Category
+                            <i class="fas fa-info-circle info-icon" title="Select a category that fits your recipe."></i>
+                         </label>
                          <select id="recipe-category" required>
-                             <option value="">Select a category</option>
+                             <option value="">
+                                Select a category
+                                <i class="fas fa-info-circle info-icon" title="Enter total preparation and cooking time in minutes."></i>
+                             </option>
                              <option value="breakfast">Breakfast</option>
                              <option value="lunch">Lunch</option>
                              <option value="dinner">Dinner</option>
@@ -130,19 +141,36 @@
                          </select>
                      </div>
                      <div class="form-group">
-                         <label for="recipe-time">Total Time (minutes)</label> <!-- Clarified label -->
+                         <label for="recipe-time">
+                            Total Time (minutes)
+                            <i class="fas fa-info-circle info-icon" title="Enter total preparation and cooking time in minutes."></i>
+                         </label> <!-- Clarified label -->
                          <input type="number" id="recipe-time" required min="1">
                      </div>
+                    <div class="form-group">
+                        <label for="ingredient-input">
+                            Ingredients
+                            <i class="fas fa-info-circle info-icon" title="Add one ingredient at a time. e.g., sugar 20g"></i>
+                        </label>
+                        <div class="ingredient-input-group">
+                            <input type="text" id="ingredient-input" placeholder="e.g., sugar 20g">
+                            <button type="button" id="add-ingredient-btn" class="btn btn-sm">Add</button>
+                        </div>
+                        <ul id="ingredient-list"></ul>
+                        <input type="hidden" name="ingredients" id="ingredients-hidden">
+                    </div>
                      <div class="form-group">
-                         <label for="recipe-ingredients">Ingredients</label>
-                         <textarea id="recipe-ingredients" placeholder="List ingredients, one per line or separated by commas" required></textarea>
-                     </div>
-                     <div class="form-group">
-                         <label for="recipe-instructions">Instructions</label>
+                         <label for="recipe-instructions">
+                            Instructions
+                            <i class="fas fa-info-circle info-icon" title="Write detailed cooking instructions or steps."></i>
+                         </label>
                          <textarea id="recipe-instructions" required></textarea>
                      </div>
                      <div class="form-group">
-                         <label>Upload Image (Optional)</label>
+                         <label>
+                            Upload Image (Optional)
+                            <i class="fas fa-info-circle info-icon" title="Upload a photo of the completed dish (Images must be under 5MB)."></i>
+                         </label>
                          <div class="file-upload" id="file-upload">
                              <i class="fas fa-cloud-upload-alt"></i>
                              <p>Click or drag image here</p> <!-- Updated text -->
@@ -150,6 +178,7 @@
                          </div>
                          <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
                      </div>
+
                      <button type="submit" class="btn"><i class="fas fa-save" id="save-recipe"></i> Save Recipe</button>
                  </form>
              </div>
