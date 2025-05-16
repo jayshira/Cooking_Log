@@ -443,7 +443,59 @@ class RouteTestCase(unittest.TestCase):
             expected_cloned_name = f"{recipe_to_clone_obj.author.username}'s {recipe_to_clone_obj.name} (Clone)"
             self.assertEqual(cloned_recipe.name, expected_cloned_name)
             self.assertEqual(cloned_recipe.whitelist, [])
+    def test_view_logs_page_accessible_by_logged_in_user(self):
+        """Test that /logs is accessible (200 OK) for a logged-in user."""
+        with self.client:
+            # Assuming self.user1 is created in setUp or you use a helper
+            login_user(self.client, self.user1.username, 'password123')
+            response = self.client.get('/logs')
+            self.assertEqual(response.status_code, 200)
+            # You could add one very simple, stable assertion, e.g., for a unique title/header
+            self.assertIn(b'My Cooking Logs', response.data) # Example check
 
+    def test_view_logs_page_redirects_if_not_logged_in(self): # Kept from previous, as it's essential
+        """Test that accessing /logs without login redirects to login page."""
+        response = self.client.get('/logs', follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue('/auth/login' in response.location)
+
+    def test_view_log_detail_page_accessible_by_owner(self):
+        """Test that /log/<id> is accessible (200 OK) by the log owner."""
+        with self.client:
+            login_user(self.client, self.user1.username, 'password123')
+            # Create a recipe and a log owned by self.user1
+            recipe = Recipe(name="Log Detail Access Recipe", category="Test", time=5,
+                            ingredients_json='[]', instructions="Test", date="2023-01-01",
+                            author=self.user1)
+            db.session.add(recipe)
+            db.session.commit()
+            log = CookingLog(user_id=self.user1.id, recipe_id=recipe.id, date_cooked=date.today())
+            db.session.add(log)
+            db.session.commit()
+
+            response = self.client.get(f'/log/{log.id}')
+            self.assertEqual(response.status_code, 200)
+            # Example simple check
+            self.assertIn(b'Cooking Log Details', response.data)
+
+    def test_view_log_detail_page_redirects_if_not_logged_in(self): # Kept from previous
+        """Test accessing /log/<id> without login redirects to login page."""
+        # Create a dummy log to have an ID for the URL
+        # This user and recipe are temporary for this test's URL construction
+        temp_user = User(username='templogowner', email='temp@log.com')
+        temp_user.set_password('p')
+        temp_recipe = Recipe(name="Temp Recipe for URL", category="Test", time=5,
+                             ingredients_json='[]', instructions="Test", date="2023-01-01",
+                             author=temp_user)
+        db.session.add_all([temp_user, temp_recipe])
+        db.session.commit()
+        log = CookingLog(user_id=temp_user.id, recipe_id=temp_recipe.id, date_cooked=date.today())
+        db.session.add(log)
+        db.session.commit()
+
+        response = self.client.get(f'/log/{log.id}', follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue('/auth/login' in response.location)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

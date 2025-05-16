@@ -6,6 +6,7 @@ Flask-WTF
 Flask-Migrate
 email-validator
 python-dotenv
+tzdata
 
 # Optional packages for running tests.
 selenium

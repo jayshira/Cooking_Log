@@ -24,8 +24,6 @@ The application follows a Multi-Page Application (MPA) architecture, where Flask
 | 22965587 | Jiwon Song      | [jiwon-07](https://github.com/jiwon-07)         
 | 23769653 | Hunter Wang     | [BiliBiliMay](https://github.com/BiliBiliMay)  
 
-*(Note: Please update Hunter Wang's GitHub username when confirmed.)*
-
 ## Key Features
 
 ### Introductory View (/)
