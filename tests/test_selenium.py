@@ -157,10 +157,7 @@ class SeleniumTest(unittest.TestCase):
         return super().setUp()
     
     def tearDown(self):
-        self.server_thread.terminate()
-        self.driver.close()
-        db.session.remove()
-        db.drop_all()
+        self.driver.quit() 
         self.app_context.pop()
 
         return super().tearDown()
@@ -319,6 +316,7 @@ class SeleniumTest(unittest.TestCase):
 
         shared_recipe_name = self.driver.find_element(By.CLASS_NAME, "shared-recipe-name")
         self.assertEqual("Test Recipe", shared_recipe_name.text)
+    
 
 
 # Instructions to run the tests:
