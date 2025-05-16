@@ -351,8 +351,13 @@ class RouteTestCase(unittest.TestCase):
                                         json={'username': 'whitelisted_dude'})
             self.assertEqual(response.status_code, 200)
             data = response.get_json()
-            self.assertIn('access granted to whitelisted_dude', data['message'])
-            self.assertIn('Sharable Recipe', data['message']) # Check recipe name is in message
+
+            self.assertIn(f"Recipe '{recipe_to_share.name}'", data['message']) # Check if recipe name is mentioned
+            self.assertIn(f"shared with {user_to_whitelist.username}", data['message']) # Check if user is mentioned and "shared with"
+            
+            expected_message = f"Recipe '{recipe_to_share.name}' shared with {user_to_whitelist.username}."
+            self.assertEqual(data['message'], expected_message)
+
 
             db.session.refresh(recipe_to_share) 
             self.assertIn(user_to_whitelist.id, recipe_to_share.whitelist)
