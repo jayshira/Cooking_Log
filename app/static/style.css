@@ -2,17 +2,17 @@
 
 /* --- Base Variables --- */
 :root {
-    --primary-color: #AEDC81;    /* 밝고 생기 있는 연두 (메인) */
-    --secondary-color: #92C67F;  /* 약간 진한 부드러운 초록 */
-    --light-color: #F3FFD9;      /* 부드러운 라이트라임, 카드 배경 등 */
-    --accent-color: #4E944F;     /* 강조용 선명한 초록 (버튼, 링크 등) */
+    --primary-color: #AEDC81;   
+    --secondary-color: #92C67F; 
+    --light-color: #F3FFD9;     
+    --accent-color: #4E944F;     
 
-    --dark-color: #2F3E2E;       /* 다크카키: 텍스트/제목 */
-    --bg-light: #F8FFF3;         /* 전체 배경용 연둣빛 화이트 */
+    --dark-color: #2F3E2E;       
+    --bg-light: #F8FFF3;         
     --white: #ffffff;
 
-    --grey: #666;                /* 기본 회색 텍스트 */
-    --light-grey: #ddd;          /* 보더 등 */
+    --grey: #666;              
+    --light-grey: #ddd;          
 
     --success-bg: #e0f4dd;
     --success-border: #b9e6b0;
@@ -149,7 +149,7 @@ a:hover {
 }
 
 .btn:hover {
-    background-color: #e66a45; /* Darker primary */
+    background-color: #4E944F; /* Darker primary */
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -491,7 +491,7 @@ body > .custom-alert {
 #ingredient-list li button {
   background: none;
   border: none;
-  color: red;
+  color: #4E944F;
   cursor: pointer;
   font-size: 0.9rem;
 }

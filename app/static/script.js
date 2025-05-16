@@ -875,8 +875,8 @@ function updateCategoryChart(categoryCounts) {
     const data = Object.values(categoryCounts);
 
     const backgroundColors = [
-        '#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87', '#6B5B95',
-        '#F7CAC9', '#92A8D1', '#F4A261', '#E76F51', '#2A9D8F', '#264653'
+        '#AEDC81', '#92C67F', '#4E944F', '#B7CEB1', '#D4E09B', '#B8E2DC', 
+        '#FFE0B2', '#A67B5B', '#F4E2D8', '#A2D2FF', '#9BC995', '#7CA982'
     ];
 
     if (categoryChart) {
@@ -921,7 +921,7 @@ function updateTopRecipesChart(topRecipesData) {
     const labels = topRecipesData.map(item => item.name);
     const data = topRecipesData.map(item => item.count);
 
-    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; // Use first 5 theme colors
+    const backgroundColors = ['#AEDC81', '#92C67F', '#4E944F', '#B7CEB1', '#D4E09B']; // Use first 5 theme colors
 
     if (topRecipesChart) {
         topRecipesChart.destroy(); // Destroy previous chart instance
@@ -977,7 +977,7 @@ function updateMonthlyFrequencyChart(frequencyData) {
     const data = frequencyData.map(item => item.count);
 
     // Consistent color or cycle through a few
-    const barColor = '#FF7B54'; // Primary color
+    const barColor = '#AEDC81'; // Primary color
 
     if (frequencyChart) {
         frequencyChart.destroy(); // Destroy previous instance
@@ -1044,7 +1044,7 @@ function updateTimeChart(recipes) {
         recipes.filter(r => (r.time || 0) >= range.min && (r.time || 0) <= range.max).length
     );
     const labels = timeRanges.map(r => r.label);
-    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87'];
+    const backgroundColors = ['#AEDC81', '#92C67F', '#4E944F', '#B7CEB1', '#D4E09B'];
 
     if (timeChart) {
         timeChart.destroy();
@@ -1142,7 +1142,7 @@ function updateTopRatedChart(topRatedData) {
         topRatedChart.destroy();
     }
 
-    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; // Use first 5 theme colors
+    const backgroundColors = ['#AEDC81', '#92C67F', '#4E944F', '#B7CEB1', '#D4E09B']; // Use first 5 theme colors
 
     topRatedChart = new Chart(ctx, {
         type: 'bar',
