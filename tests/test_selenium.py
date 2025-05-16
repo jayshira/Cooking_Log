@@ -1,5 +1,6 @@
 import unittest
 import multiprocessing
+from threading import Thread
 
 from config import TestConfig
 from app import db, create_app
@@ -141,7 +142,11 @@ class SeleniumTest(unittest.TestCase):
         #db stuff and prebuilduser
         setup_test_database()
 
-        self.server_thread = multiprocessing.Process(target=self.testApp.run)
+        self.server_thread = Thread(
+            target=self.testApp.run,
+            kwargs={'use_reloader': False}
+        )
+        self.server_thread.daemon = True
         self.server_thread.start()
 
         options = webdriver.ChromeOptions()
