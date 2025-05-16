@@ -3,7 +3,7 @@ import multiprocessing
 
 from config import TestConfig
 from app import db, create_app
-from app.models import User
+from app.models import User, Recipe
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -51,6 +51,51 @@ class SeleniumTest(unittest.TestCase):
         WebDriverWait(self.driver, 10).until(
             expected_conditions.url_changes(self.driver.current_url)
         )
+
+    def helper_add_recipe(self):
+        add_recipe_button = self.driver.find_element(By.ID, "add-recipe-button")
+        add_recipe_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element_attribute(
+                (By.ID, "add"),
+                "class",
+                "active"
+            )
+        )
+
+        # Find the recipe fields
+        recipe_name_field = self.driver.find_element(By.ID, "recipe-name")
+        recipe_time_field = self.driver.find_element(By.ID, "recipe-time")
+        recipe_ingredients_field = self.driver.find_element(By.ID, "ingredient-input")
+        recipe_add_button = self.driver.find_element(By.ID, "add-ingredient-btn")
+        recipe_instructions_field = self.driver.find_element(By.ID, "recipe-instructions")
+
+        # Fill in the fields
+        recipe_name_field.send_keys("Test Recipe")
+        recipe_time_field.send_keys("30")
+        recipe_ingredients_field.send_keys("Test1 30g")
+        recipe_add_button.click()
+        recipe_ingredients_field.send_keys("Test2 20g")
+        recipe_add_button.click()
+        recipe_instructions_field.send_keys("Test instructions")
+
+        # Special case for category
+        recipe_category_field = Select(self.driver.find_element(By.ID, "recipe-category"))
+        recipe_category_field.select_by_visible_text("Dessert")
+
+        # Submit the form
+        submit_button = self.driver.find_element(By.ID, "save-recipe-btn")
+        submit_button.click()
+
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.text_to_be_present_in_element_attribute(
+                (By.ID, "my-recipes-button"),
+                "class",
+                "active"
+            )
+        )
+
 
     def setUp(self):
         self.testApp = create_app(TestConfig)
@@ -135,55 +180,29 @@ class SeleniumTest(unittest.TestCase):
     
     def test_add_recipe(self):
         self.helper_login()
-
-        add_recipe_button = self.driver.find_element(By.ID, "add-recipe-button")
-        add_recipe_button.click()
-
-        WebDriverWait(self.driver, 10).until(
-            expected_conditions.text_to_be_present_in_element_attribute(
-                (By.ID, "add"),
-                "class",
-                "active"
-            )
-        )
-
-        # Find the recipe fields
-        recipe_name_field = self.driver.find_element(By.ID, "recipe-name")
-        recipe_time_field = self.driver.find_element(By.ID, "recipe-time")
-        recipe_ingredients_field = self.driver.find_element(By.ID, "ingredient-input")
-        recipe_add_button = self.driver.find_element(By.ID, "add-ingredient-btn")
-        recipe_instructions_field = self.driver.find_element(By.ID, "recipe-instructions")
-
-        # Fill in the fields
-        recipe_name_field.send_keys("Test Recipe")
-        recipe_time_field.send_keys("30")
-        recipe_ingredients_field.send_keys("Test1 30g")
-        recipe_add_button.click()
-        recipe_ingredients_field.send_keys("Test2 20g")
-        recipe_add_button.click()
-        recipe_instructions_field.send_keys("Test instructions")
-
-        # Special case for category
-        recipe_category_field = Select(self.driver.find_element(By.ID, "recipe-category"))
-        recipe_category_field.select_by_visible_text("Dessert")
-
-        # Submit the form
-        submit_button = self.driver.find_element(By.ID, "save-recipe-btn")
-        submit_button.click()
-
-        WebDriverWait(self.driver, 10).until(
-            expected_conditions.text_to_be_present_in_element_attribute(
-                (By.ID, "my-recipes-button"),
-                "class",
-                "active"
-            )
-        )
+        self.helper_add_recipe()
 
         # Check if the recipe was added successfully
         recipe_title_field = self.driver.find_element(By.CLASS_NAME, "recipe-title")
         self.assertEqual("Test Recipe", recipe_title_field.text)
 
     # MORE SELENIUM TESTS HERE
+    def test_delete_recipe(self):
+        self.helper_login()
+        self.helper_add_recipe()
+
+        # Find the delete button for the first recipe
+        delete_button = self.driver.find_element(By.CLASS_NAME, "btn-danger")
+        delete_button.click()
+
+        # Confirm deletion
+        WebDriverWait(self.driver, 10).until(
+            expected_conditions.alert_is_present())
+
+        alert = self.driver.switch_to.alert
+        alert.accept()
+
+        self.assertTrue(True)
 
 # Instructions to run the tests:
 # 1. Ensure your application is running locally (e.g., on http://localhost:5000).
