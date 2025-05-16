@@ -3,6 +3,12 @@
 // Global variables for charts
 let topRecipesChart = null;
 let frequencyChart = null;
+let topRatedChart = null;
+let chartStates = {
+    'top-recipes': 'all-time',
+    'frequency': 'monthly',
+    'top-rated': 'all-time'
+};
 let currentRecipes = []; // Cache recipes locally for search/share dropdowns
 
 // --- API Helper Functions ---
@@ -48,18 +54,54 @@ async function fetchApi(url, options = {}) {
 // const recipes = await fetchApi('/api/recipes');
 // const newRecipe = await fetchApi('/api/recipes', { method: 'POST', ... });
 
-function showTemporaryStatusMessage(message, type = 'info') {
+// static/script.js
+function showTemporaryStatusMessage(message, type = 'info', duration = 3000) {
     const statusDiv = document.createElement('div');
-    statusDiv.className = `alert alert-${type}`; // Use existing alert styles
+    statusDiv.className = `alert alert-${type}`;
     statusDiv.textContent = message;
-    // Style for fixed position at top-center
-    statusDiv.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1050; ...';
+    
+    // Base styles
+    statusDiv.style.position = 'fixed';
+    statusDiv.style.top = '20px';
+    statusDiv.style.left = '50%';
+    statusDiv.style.transform = 'translateX(-50%)';
+    statusDiv.style.zIndex = '1050';
+    statusDiv.style.padding = '10px 20px'; // Ensure padding
+    statusDiv.style.borderRadius = '5px'; // Ensure border-radius
+    statusDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)'; // Add some shadow
+    statusDiv.style.opacity = '1';
+    statusDiv.style.transition = 'opacity 0.5s ease-out'; // For fade-out
+
+    // Apply alert-specific styles if not already covered by global .alert classes
+    // This ensures the background and text colors are set correctly if .alert-{type} isn't globally sufficient
+    switch (type) {
+        case 'success':
+            statusDiv.style.backgroundColor = 'var(--success-bg)'; statusDiv.style.color = 'var(--success-text)'; statusDiv.style.borderColor = 'var(--success-border)';
+            break;
+        case 'warning':
+            statusDiv.style.backgroundColor = 'var(--warning-bg)'; statusDiv.style.color = 'var(--warning-text)'; statusDiv.style.borderColor = 'var(--warning-border)';
+            break;
+        case 'danger':
+            statusDiv.style.backgroundColor = 'var(--danger-bg)'; statusDiv.style.color = 'var(--danger-text)'; statusDiv.style.borderColor = 'var(--danger-border)';
+            break;
+        case 'info':
+        default:
+            statusDiv.style.backgroundColor = 'var(--info-bg)'; statusDiv.style.color = 'var(--info-text)'; statusDiv.style.borderColor = 'var(--info-border)';
+            break;
+    }
+    
     document.body.appendChild(statusDiv);
-    // Remove after a delay
-    setTimeout(() => { /* ... fade out and remove ... */ }, 3000);
+
+    setTimeout(() => {
+        statusDiv.style.opacity = '0'; // Start fade-out
+        // Remove from DOM after transition completes
+        setTimeout(() => {
+            if (statusDiv.parentNode) {
+                statusDiv.parentNode.removeChild(statusDiv);
+            }
+        }, 500); // Match transition duration
+    }, duration);
 }
-// Example usage:
-// postSaveActions(savedRecipe, ...) { if (savedRecipe) { showTemporaryStatusMessage("Recipe saved!", "success"); } }
 
 
 function copyRecipeLink() {
@@ -245,8 +287,6 @@ function renderRecipeCard(recipe) {
         ? `background-image: url(${recipe.image});`
         : 'background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color));';
 
-    const isOwner = typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID;
-
     recipeCard.innerHTML = `
         <div class="recipe-img" style="${imageStyle}"></div>
         <div class="recipe-info">
@@ -259,12 +299,13 @@ function renderRecipeCard(recipe) {
                 <strong>Ingredients:</strong> ${ingredientsPreview || 'No ingredients listed'}
             </p>
             <div class="recipe-actions">
-                <!-- View Button (always visible maybe?) -->
+                <!-- View Button (always visible) -->
                 <a href="/view_recipe/${recipe.id}" class="btn btn-secondary btn-sm">
                     <i class="fas fa-eye"></i> View
                 </a>
 
-                ${isOwner ? `
+                <!-- Edit Button (only for owner) -->
+                ${typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID ? `
                 <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})">
                     <i class="fas fa-edit"></i> Edit
                 </button>
@@ -485,63 +526,44 @@ async function saveRecipe(recipeData, isEditing, submitButton) {
 }
 
 function postSaveActions(savedRecipe, submitButton) {
+    const wasEditing = document.getElementById('recipe-form').dataset.editingId; // Check *before* deleting
+
     submitButton.disabled = false;
-    submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe';
+    // After an add or update, the form resets to "Add Recipe" mode.
+    submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe'; 
     
     if (savedRecipe) {
         document.getElementById('recipe-form').reset();
-        delete document.getElementById('recipe-form').dataset.editingId;
+        // Clear the image file input and its status specifically
+        const imageInput = document.getElementById('recipe-image');
+        if (imageInput) imageInput.value = ''; 
+        const fileUploadStatus = document.getElementById('file-upload-status');
+        if (fileUploadStatus) {
+            fileUploadStatus.textContent = '';
+            fileUploadStatus.className = '';
+        }
+
+        if (wasEditing) { // If it was an edit, clear the editing state
+            delete document.getElementById('recipe-form').dataset.editingId;
+        }
         
         // Remove cancel button if it exists
         const cancelBtn = document.getElementById('cancel-edit-btn');
         if (cancelBtn) cancelBtn.remove();
         
-        // Reset form header
+        // Reset form header to "Add New Recipe"
         document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
         
-        // Clear file upload status
-        const fileUploadStatus = document.getElementById('file-upload-status');
-        if (fileUploadStatus) {
-            fileUploadStatus.textContent = '';
-            fileUploadStatus.className = '';
-        }
+        loadRecipes(); // Reload recipes to show changes
+        switchTab('my-recipes'); // Switch to the recipes list tab
         
-        // Reload recipes and switch tab
-        loadRecipes();
-        switchTab('my-recipes');
         showTemporaryStatusMessage(
-            `Recipe "${savedRecipe.name}" ${submitButton.innerHTML.includes('Update') ? 'updated' : 'saved'} successfully!`, 
+            `Recipe "${savedRecipe.name}" ${wasEditing ? 'updated' : 'saved'} successfully!`, 
             'success'
         );
     }
 }
 
-// Actions to take after trying to save a recipe
-function postSaveActions(savedRecipe, submitButton) {
-     submitButton.disabled = false;
-     submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe'; // Reset button text/icon
-
-    if (savedRecipe) {
-        document.getElementById('recipe-form').reset();
-        const fileUploadStatus = document.getElementById('file-upload-status');
-        document.getElementById('recipe-image').value = '';
-        if (fileUploadStatus) {
-            fileUploadStatus.textContent = '';
-            fileUploadStatus.className = '';
-        }
-
-        // Reload recipes which now includes the new one
-        loadRecipes();
-        // Switch to the 'My Recipes' tab to show the new card
-        switchTab('my-recipes'); // Use the new tab ID
-        // Give specific success feedback
-        // Flash message will appear on reload/redirect if backend sends one,
-        // but an alert gives immediate feedback here.
-        alert(`Recipe "${savedRecipe.name}" saved successfully!`);
-    } else {
-        // Error alerts handled within addRecipeToServer
-    }
-}
 
 // Delete recipe function (called by button)
 async function deleteRecipe(id) {
@@ -726,11 +748,56 @@ function displaySharePreview(recipeId) {
 
 // --- Stats and Charts (uses local cache) ---
 
+// Add toggle function
+function toggleChart(chartType) {
+    const state = chartStates[chartType];
+    const newState = state === 'all-time' ? 'this-month' : 'all-time';
+    
+    if (chartType === 'frequency') {
+        if (state === 'weekly') {
+            document.getElementById('frequency-title').textContent = 'Monthly Cooking Frequency';
+        } else {
+            document.getElementById('frequency-title').textContent = 'This Week\'s Cooking Frequency';
+        }
+        
+        chartStates[chartType] = state === 'monthly' ? 'weekly' : 'monthly';    
+    } else {
+        chartStates[chartType] = newState;
+    }
+
+    // Update button text
+    const button = event.target.closest('button');
+    if (button) {
+        const toggleText = chartType === 'frequency' ? 
+            (chartStates[chartType] === 'monthly' ? 'Show This Week' : 'Show Monthly View') :
+            (chartStates[chartType] === 'all-time' ? 'Show This Month' : 'Show All Time');
+        button.innerHTML = `<i class="fas fa-exchange-alt"></i> ${toggleText}`;
+    }
+
+    // Update charts
+    if (chartType === 'top-recipes') {
+        const data = chartStates[chartType] === 'all-time' ? 
+            LOG_STATS_DATA.top_recipes_data : 
+            LOG_STATS_DATA.top_recipes_this_month_data;
+        updateTopRecipesChart(data);
+    } else if (chartType === 'frequency') {
+        if (chartStates[chartType] === 'monthly') {
+            updateMonthlyFrequencyChart(LOG_STATS_DATA.monthly_frequency_data);
+        } else {
+            updateWeeklyFrequencyChart(LOG_STATS_DATA.weekly_frequency_data);
+        }
+    } else if (chartType === 'top-rated') {
+        const data = chartStates[chartType] === 'all-time' ? 
+            LOG_STATS_DATA.top_rated_data : 
+            LOG_STATS_DATA.top_rated_this_month_data;
+        updateTopRatedChart(data);
+    }
+}
+
 function updateStats() {
     // Use the global LOG_STATS_DATA parsed from the template
     const stats = LOG_STATS_DATA;
 
-    // Update the stat display elements
     const totalSessionsEl = document.getElementById('total-sessions');
     const mostFrequentRecipeEl = document.getElementById('most-frequent-recipe');
     const mostFrequentCountEl = document.getElementById('most-frequent-count');
@@ -740,9 +807,9 @@ function updateStats() {
     if (totalSessionsEl) totalSessionsEl.textContent = stats.total_sessions || 0;
 
     if (mostFrequentRecipeEl) {
-        if (stats.most_frequent_recipe && stats.most_frequent_recipe[1] > 0) {
-            mostFrequentRecipeEl.textContent = stats.most_frequent_recipe[0]; // Name
-            if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe[1]} logs)`;
+        if (stats.most_frequent_recipe && stats.most_frequent_recipe.name && stats.most_frequent_recipe.name !== '-' && stats.most_frequent_recipe.count > 0) {
+            mostFrequentRecipeEl.textContent = stats.most_frequent_recipe.name; // Access .name
+            if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe.count} logs)`; // Access .count
         } else {
             mostFrequentRecipeEl.textContent = '-';
             if (mostFrequentCountEl) mostFrequentCountEl.textContent = '';
@@ -765,11 +832,14 @@ function updateStats() {
     }
 
     // Update the charts using the data from LOG_STATS_DATA
-    if (document.getElementById('top-recipes-chart')) {
-        updateTopRecipesChart(stats.top_recipes_data || []);
+    if (document.getElementById('top-recipes-chart') && stats.top_recipes_data) {
+        updateTopRecipesChart(stats.top_recipes_data);
     }
-    if (document.getElementById('frequency-chart')) {
-        updateMonthlyFrequencyChart(stats.monthly_frequency_data || []);
+    if (document.getElementById('top-rated-chart') && LOG_STATS_DATA.top_rated_data) {
+        updateTopRatedChart(LOG_STATS_DATA.top_rated_data);
+    }
+    if (document.getElementById('frequency-chart') && stats.monthly_frequency_data) {
+        updateMonthlyFrequencyChart(stats.monthly_frequency_data);
     }
 }
 
@@ -864,11 +934,8 @@ function updateTopRecipesChart(topRecipesData) {
                 }
             },
             plugins: {
-                legend: { display: false }, // No legend needed for single dataset
+                legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'var(--dark-color)',
-                    titleColor: 'var(--white)',
-                    bodyColor: 'var(--white)',
                     callbacks: {
                         label: function(context) {
                             return ` Logs: ${context.raw || 0}`;
@@ -924,9 +991,6 @@ function updateMonthlyFrequencyChart(frequencyData) {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                     backgroundColor: 'var(--dark-color)',
-                     titleColor: 'var(--white)',
-                     bodyColor: 'var(--white)',
                      callbacks: {
                         title: function(context) {
                              // Format title e.g., "October 2023"
@@ -983,6 +1047,119 @@ function updateTimeChart(recipes) {
             plugins: {
                 legend: { display: false },
                 tooltip: { backgroundColor: 'var(--dark-color)', titleColor: 'var(--white)', bodyColor: 'var(--white)' }
+            }
+        }
+    });
+}
+
+function updateWeeklyFrequencyChart(weeklyData) {
+    const ctx = document.getElementById('frequency-chart')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = weeklyData.map(item => {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return days[item.day - 1]; // Adjust for 1-based index from database
+    });
+    const data = weeklyData.map(item => item.count);
+
+    if (frequencyChart) {
+        frequencyChart.destroy();
+    }
+
+    frequencyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Sessions Logged',
+                data: data,
+                backgroundColor: '#FF7B54',
+                borderColor: '#FF7B54B3',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, color: 'var(--grey)' },
+                    grid: { color: '#eee' }
+                },
+                x: {
+                    ticks: { color: 'var(--grey)' },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            const dayIndex = context[0].label;
+                            return ` ${dayIndex}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Add new chart update functions
+function updateTopRatedChart(topRatedData) {
+    const ctx = document.getElementById('top-rated-chart')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = topRatedData.map(item => item.name);
+    const data = topRatedData.map(item => item.rating);
+
+    if (topRatedChart) {
+        topRatedChart.destroy();
+    }
+
+    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; // Use first 5 theme colors
+
+    topRatedChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Average Rating',
+                data: data,
+                backgroundColor: backgroundColors.slice(0, labels.length),
+                borderColor: backgroundColors.map(c => c + 'B3'),
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    max: 5,
+                    min: 0,
+                    ticks: { color: 'var(--grey)' },
+                    grid: { color: '#eee' }
+                },
+                y: {
+                    ticks: { color: 'var(--grey)' },
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return ` Rating: ${context.raw?.toFixed(1) || 0} ★`;
+                        }
+                    }
+                }
             }
         }
     });
@@ -1099,31 +1276,72 @@ async function fetchSharedRecipes() {
     }
 }
 
+async function fetchSharedRecipes() {
+    try {
+        const response = await fetch('/api/shared_recipes/my');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error("Error fetching shared recipes:", error);
+        return [];
+    }
+}
+
 function displaySharedRecipes() {
     const sharedRecipesList = document.getElementById('shared-recipes-list');
     const noRecipesMessage = document.getElementById('no-recipes-message');
 
+    // Show loading state
+    sharedRecipesList.innerHTML = '<p class="loading-message" style="text-align: center; padding: 20px; color: var(--grey);"><i class="fas fa-spinner fa-spin"></i> Loading shared recipes...</p>';
+    noRecipesMessage.style.display = 'none'; // Hide no recipes message while loading
+
     fetchSharedRecipes().then(shared_recipes => {
+        sharedRecipesList.innerHTML = ''; // Clear loading message
+
         if (shared_recipes.length === 0) {
             noRecipesMessage.style.display = 'block';
-            sharedRecipesList.style.display = 'none';
+            // sharedRecipesList remains empty if no recipes
         } else {
             noRecipesMessage.style.display = 'none';
-            sharedRecipesList.style.display = 'block';
             
-            sharedRecipesList.innerHTML = '';
             shared_recipes.forEach(shared_recipe => {
-                const li = document.createElement('li');
-                li.textContent = `${shared_recipe.recipe_name} - Shared by ${shared_recipe.sharer_name} on ${shared_recipe.date_shared.split('T')[0]}`;
-                li.addEventListener('click', () => {
-                    window.open(`./view_recipe/${shared_recipe.recipe_id}`, '_blank');
-                    // Add your recipe viewing logic here
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shared-recipe-item';
+                
+                // Format date for better readability
+                const dateShared = new Date(shared_recipe.date_shared);
+                const formattedDate = dateShared.toLocaleDateString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric'
                 });
-                sharedRecipesList.appendChild(li);
+
+                itemDiv.innerHTML = `
+                    <div class="shared-recipe-icon">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <div class="shared-recipe-details">
+                        <h4 class="shared-recipe-name">${shared_recipe.recipe_name}</h4>
+                        <p class="shared-recipe-meta">
+                            Shared by <strong>${shared_recipe.sharer_name}</strong> on ${formattedDate}
+                        </p>
+                    </div>
+                    <div class="shared-recipe-action">
+                        <i class="fas fa-chevron-right"></i>
+                    </div>
+                `;
+                
+                itemDiv.addEventListener('click', () => {
+                    window.open(`./view_recipe/${shared_recipe.recipe_id}`, '_blank');
+                });
+                sharedRecipesList.appendChild(itemDiv);
             });
         }
     }).catch(error => {
         console.error('Error fetching shared recipes:', error);
+        sharedRecipesList.innerHTML = ''; // Clear loading message on error
+        noRecipesMessage.textContent = 'Could not load shared recipes.';
+        noRecipesMessage.style.display = 'block';
     });
 }
 

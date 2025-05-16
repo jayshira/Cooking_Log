@@ -183,7 +183,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const recipeId = {{ recipe.id | tojson }}; // Safely pass recipeId to JS
+            const recipeId = {{ recipe.id | tojson | safe }}; // Safely pass recipeId to JS
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
             const deleteBtn = document.getElementById('deleteRecipeBtn');

@@ -21,6 +21,18 @@
   </header>
 
   <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages" style="margin-bottom: 20px;">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="close-alert" data-dismiss="alert" aria-label="Close" onclick="this.parentElement.style.display='none';">×</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
     <section class="intro-section card">
       <h2>What is KitchenLog?</h2>
       <p>KitchenLog is more than a recipe book – it's your smart kitchen assistant. Save all your delicious creations and gain insights into your cooking habits!</p>

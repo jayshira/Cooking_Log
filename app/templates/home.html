@@ -53,7 +53,8 @@
              <!-- Cooking Streak -->
              <div class="streak-display" style="text-align: center;">
                  <span style="font-size: 2.5rem; display:block; color: var(--primary-color);">🔥</span>
-                 <span style="font-weight: bold; font-size: 1.2rem;">{{ current_streak }}</span> Day Streak!
+                 <!-- MODIFIED HERE: Changed current_streak to streak -->
+                 <span style="font-weight: bold; font-size: 1.2rem;">{{ streak }}</span> Day Streak!
              </div>
 
              <!-- Recent Activity -->
@@ -154,45 +155,71 @@
              </div>
          </div>
 
-         <!-- **** MODIFIED Recipe Stats Tab **** -->
-         <div id="recipe-stats" class="tab-content">
-              <div class="card">
-                  <!-- NEW TITLE -->
-                  <h2><i class="fas fa-chart-line"></i> My Cooking Statistics</h2>
-                  <!-- NEW DESCRIPTION -->
-                  <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">
-                      Statistics based on your logged cooking sessions.
-                  </p>
-                  <!-- NEW STATS GRID -->
-                  <div class="stats-grid" id="log-stats-display">
-                      <div class="stat-card">
-                          <div class="stat-label">Total Sessions Logged</div>
-                          <div class="stat-value" id="total-sessions">0</div>
-                      </div>
-                      <div class="stat-card">
-                          <div class="stat-label">Most Frequent Recipe</div>
-                          <div class="stat-value" id="most-frequent-recipe">-</div>
-                          <div class="stat-label" id="most-frequent-count"></div>
-                      </div>
-                      <div class="stat-card">
-                          <div class="stat-label">Total Time Logged</div>
-                          <div class="stat-value" id="total-time-logged">0h 0m</div>
-                          <div class="stat-label">(Sum of durations)</div>
-                      </div>
-                      <div class="stat-card">
-                          <div class="stat-label">Average Rating</div>
-                          <div class="stat-value" id="average-rating">N/A</div>
-                          <div class="stat-label">(1-5 stars)</div>
-                      </div>
-                  </div>
-                  <!-- NEW CHARTS -->
-                  <h3 style="margin-top: 30px;">Top 5 Most Logged Recipes</h3>
-                  <div class="chart-container"><canvas id="top-recipes-chart"></canvas></div>
-                  <h3 style="margin-top: 30px;">Monthly Cooking Frequency (Last 12 Months)</h3>
-                  <div class="chart-container"><canvas id="frequency-chart"></canvas></div>
-              </div>
-          </div>
-         <!-- **** END MODIFIED Recipe Stats Tab **** -->
+        <!-- **** MODIFIED Recipe Stats Tab **** -->
+        <div id="recipe-stats" class="tab-content">
+            <div class="card">
+                <!-- NEW TITLE -->
+                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fas fa-chart-line"></i> My Cooking Statistics</span>
+                <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-list"></i> View Logs
+                </a>
+            </h2>
+                <!-- NEW DESCRIPTION -->
+                <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 20px;">
+                    Statistics based on your logged cooking sessions.
+                </p>
+                <!-- NEW STATS GRID -->
+                <div class="stats-grid" id="log-stats-display">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Sessions Logged</div>
+                        <div class="stat-value" id="total-sessions">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Most Frequent Recipe</div>
+                        <div class="stat-value" id="most-frequent-recipe">-</div>
+                        <div class="stat-label" id="most-frequent-count"></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Time Logged</div>
+                        <div class="stat-value" id="total-time-logged">0h 0m</div>
+                        <div class="stat-label">(Sum of durations)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Average Rating</div>
+                        <div class="stat-value" id="average-rating">N/A</div>
+                        <div class="stat-label">(1-5 stars)</div>
+                    </div>
+                </div>
+                <!-- NEW CHARTS -->
+                <h3 style="margin-top: 30px;">
+                    Top 5 Most Logged Recipes
+                    <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('top-recipes')">
+                        <i class="fas fa-exchange-alt"></i> Show This Month
+                    </button>
+                </h3>
+                <div class="chart-container"><canvas id="top-recipes-chart"></canvas></div>
+                
+                <!-- New Top Rated Section -->
+                <h3 style="margin-top: 30px;">
+                    Top 5 Highest Rated Recipes
+                    <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('top-rated')">
+                        <i class="fas fa-exchange-alt"></i> Show This Month
+                    </button>
+                </h3>
+                <div class="chart-container"><canvas id="top-rated-chart"></canvas></div>
+                
+                <!-- Modified Frequency Section -->
+                <h3 style="margin-top: 30px;">
+                    <span id="frequency-title">Monthly Cooking Frequency</span>
+                    <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart('frequency')">
+                        <i class="fas fa-exchange-alt"></i> Show This Week
+                    </button>
+                </h3>
+                <div class="chart-container"><canvas id="frequency-chart"></canvas></div>
+            </div>
+        </div>
+        <!-- **** END MODIFIED Recipe Stats Tab **** -->
 
         <!-- Share Tab (Keep as is) -->
         <div id="share" class="tab-content">
@@ -236,25 +263,43 @@
     <div id="mailbox-popup" class="mailbox-popup">
         <div class="popup-header">
             <h3>Shared Recipes</h3>
-            <button id="close-popup">&times;</button>
+            <button id="close-popup">×</button>
         </div>
         <div class="popup-content">
             <p id="no-recipes-message">No shared recipes yet</p>
-            <ul id="shared-recipes-list"></ul>
+            <div id="shared-recipes-list"></div> <!-- Changed ul to div -->
         </div>
     </div>
+
     <!-- /.container -->
 
     <!-- Pass user ID AND log stats data to JS -->
     <!-- **** CORRECTED SCRIPT BLOCK **** -->
-    <script>
-        const CURRENT_USER_ID = {{ current_user.id | tojson }};
-        // Directly assign the JS object created by Jinja's tojson filter
-        // Requires passing the log_stats *dictionary* from the backend route
-        const LOG_STATS_DATA = {{ log_stats | tojson | safe }};
-    </script>
-    <!-- **** END CORRECTED SCRIPT BLOCK **** -->
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+   <!-- Securely Pass User ID and Log Stats Data to JS -->
+   <script type="text/javascript">
+    // Make LOG_STATS_DATA and CURRENT_USER_ID globally accessible
+    var CURRENT_USER_ID = JSON.parse('{{ current_user.id | tojson | safe }}');
+    var LOG_STATS_DATA = JSON.parse('{{ log_stats | tojson | safe }}');
 
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("User ID (DOMContentLoaded):", CURRENT_USER_ID);
+        console.log("Log Stats (DOMContentLoaded):", LOG_STATS_DATA);
+
+        const statsTab = document.querySelector('.tab[data-tab="recipe-stats"]');
+        if (statsTab) {
+            statsTab.addEventListener('click', function() {
+                if (typeof LOG_STATS_DATA !== 'undefined' && LOG_STATS_DATA !== null) {
+                    updateStats();
+                } else {
+                    console.warn("LOG_STATS_DATA is not available when trying to update stats.");
+                }
+            });
+        } else {
+            console.warn("Recipe stats tab not found in DOM.");
+        }
+    });
+</script>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

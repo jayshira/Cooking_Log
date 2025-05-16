@@ -596,6 +596,11 @@ body > .custom-alert {
     margin-top: 20px;
     position: relative;
 }
+.chart-toggle-btn {
+    margin-left: 10px; 
+    font-size: 0.8rem;
+    text-align: right;
+}
 
 /* --- Share Section --- */
 .share-options {
@@ -710,13 +715,14 @@ body > .custom-alert {
 /* Popup styles */
 .mailbox-popup {
     display: none;
-    position: absolute;
-    right: 20px;
-    top: 70px;
+    position: absolute; /* Changed from fixed if it's relative to a header icon */
+    /* Consider relative positioning to the .tabs or .faketab if that's the anchor */
+    right: 20px; /* Adjust as needed relative to its parent/anchor */
+    top: 55px;  /* Adjust to position below the mailbox icon, assuming icon height */
     background: white;
     border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.15);
-    width: 300px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2); /* Softer, larger shadow */
+    width: 320px; /* Slightly wider */
     z-index: 1000;
     overflow: hidden;
 }
@@ -728,42 +734,113 @@ body > .custom-alert {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--light-grey); /* Added border */
+}
+.popup-header h3 { /* Target h3 inside popup-header */
+    margin: 0; /* Remove default h3 margin */
+    font-size: 1.1rem; /* Adjust size */
+    font-weight: 600;
 }
 
 #close-popup {
     background: none;
     border: none;
     color: white;
-    font-size: 18px;
+    font-size: 1.2rem; /* Adjusted size */
+    font-weight: bold;
     cursor: pointer;
+    padding: 2px 5px; /* Easier to click */
+    line-height: 1;
+    opacity: 0.8;
+}
+#close-popup:hover {
+    opacity: 1;
 }
 
 .popup-content {
-    padding: 10px;
+    padding: 0; /* Remove padding, items will have their own */
     max-height: 400px;
     overflow-y: auto;
 }
 
+/* Styles for individual shared recipe items */
+.shared-recipe-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0; /* Lighter border */
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.shared-recipe-item:last-child {
+    border-bottom: none;
+}
+.shared-recipe-item:hover {
+    background-color: var(--bg-light); /* Use a light background on hover */
+}
+
+.shared-recipe-icon {
+    margin-right: 15px; /* Increased margin */
+    font-size: 1.4rem; /* Slightly adjusted icon size */
+    color: var(--primary-color); /* Use primary color for icon */
+    flex-shrink: 0;
+    width: 25px; /* Ensure consistent width for icon area */
+    text-align: center;
+}
+
+.shared-recipe-details {
+    flex-grow: 1;
+    overflow: hidden; 
+}
+.shared-recipe-name {
+    font-size: 0.95rem; /* Slightly smaller for compactness */
+    font-weight: 600;
+    color: var(--dark-color);
+    margin: 0 0 3px 0; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.shared-recipe-meta {
+    font-size: 0.8rem; /* Smaller meta text */
+    color: var(--grey);
+    margin: 0;
+}
+.shared-recipe-meta strong {
+    color: var(--dark-color); /* Keep username distinct */
+    font-weight: 500;
+}
+
+.shared-recipe-action {
+    margin-left: 12px; /* Increased margin */
+    font-size: 0.85rem;
+    color: var(--light-grey); /* Lighter chevron */
+    transition: color 0.2s ease;
+}
+.shared-recipe-item:hover .shared-recipe-action {
+    color: var(--primary-color); /* Chevron color change on hover */
+}
+
+
+/* Loading and no-recipes message styling */
+.popup-content .loading-message, /* For loading inside popup-content */
+#no-recipes-message { /* Existing ID for no-recipes */
+    padding: 25px 20px; /* More padding */
+    text-align: center;
+    color: var(--grey);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+.popup-content .loading-message .fa-spinner {
+    margin-right: 8px;
+    color: var(--primary-color); /* Spinner color */
+}
+
+/* Ensure list styles are reset if #shared-recipes-list was a ul before */
 #shared-recipes-list {
     list-style: none;
     padding: 0;
     margin: 0;
-}
-
-#shared-recipes-list li {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-}
-
-#shared-recipes-list li:hover {
-    background-color: #f9f9f9;
-}
-
-#no-recipes-message {
-    color: var(--grey);
-    text-align: center;
-    padding: 20px;
 }
 
 /* --- File Upload --- */
@@ -829,6 +906,48 @@ footer {
     background-color: #f0f0f0;
 }
 
+
+/* Logs Table Styles */
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.logs-table th, .logs-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--light-grey);
+}
+
+.logs-table th {
+    background-color: var(--bg-light);
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.logs-table tr:hover {
+    background-color: rgba(255, 123, 84, 0.05);
+}
+
+.filter-controls {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+    .logs-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+}
 /* --- Responsive Design --- */
 @media (max-width: 992px) { /* Tablets */
     .stats-grid {

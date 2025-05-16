@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - KitchenLog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .edit-log-container { max-width: 700px; margin: 30px auto; }
+        .rating-stars label { cursor: pointer; font-size: 1.8rem; color: #ccc; transition: color 0.2s; }
+        .rating-stars input[type="radio"] { display: none; }
+        .rating-stars input[type="radio"]:checked ~ label { color: #ffc107; }
+        .rating-stars label:hover, .rating-stars label:hover ~ label { color: #ffca2c; }
+        .rating-stars { display: inline-block; direction: rtl; } 
+        .rating-stars label { float: right; } 
+        .image-preview, .current-image-display { max-width: 100%; max-height: 200px; display: block; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ddd;}
+        .image-preview-container, .current-image-container { text-align: center; margin-top: 10px; }
+        .remove-btn-style { margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-edit"></i> {{ title }}</h1>
+             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
+                <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to Logs
+                </a>
+                {% if log_entry %}
+                <a href="{{ url_for('main.view_log_detail', log_id=log_entry.id) }}" class="btn btn-info btn-sm" style="margin-left:5px;">
+                    <i class="fas fa-eye"></i> View This Log
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <div class="container edit-log-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            {% if log_entry and log_entry.recipe_logged %}
+                <h2 style="border-bottom:none; margin-bottom: 5px; font-size: 1.5rem;">Recipe: {{ log_entry.recipe_logged.name }}</h2>
+            {% elif log_entry and not log_entry.recipe_logged %}
+                 <h2 style="border-bottom:none; margin-bottom: 5px; font-size: 1.5rem;">Recipe: <em>Deleted Recipe</em></h2>
+            {% else %}
+                 <p>Error: Log entry not found.</p>
+            {% endif %}
+            {% if log_entry %}
+                 <p style="color: var(--grey); margin-bottom: 25px; font-size:0.9em;">
+                    You are editing this cooking log.
+                </p>
+            {% endif %}
+
+
+            {% if log_entry %}
+            <form method="POST" action="{{ url_for('main.edit_log', log_id=log_entry.id) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                <div class="form-group">
+                    <label for="date_cooked" class="form-label">Date Cooked</label>
+                    <input type="date" class="form-control" id="date_cooked" name="date_cooked" 
+                           value="{{ log_entry.date_cooked.isoformat() if log_entry.date_cooked else '' }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="duration_minutes" class="form-label">Duration (minutes)</label>
+                    <input type="number" class="form-control" id="duration_minutes" name="duration_minutes" 
+                           value="{{ (log_entry.duration_seconds // 60) if log_entry.duration_seconds is not none else '' }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="rating" class="form-label">Rating (Optional)</label>
+                    <div class="rating-stars">
+                        <input type="radio" id="star5" name="rating" value="5" {% if log_entry.rating == 5 %}checked{% endif %} /><label for="star5" title="5 stars">★</label>
+                        <input type="radio" id="star4" name="rating" value="4" {% if log_entry.rating == 4 %}checked{% endif %} /><label for="star4" title="4 stars">★</label>
+                        <input type="radio" id="star3" name="rating" value="3" {% if log_entry.rating == 3 %}checked{% endif %} /><label for="star3" title="3 stars">★</label>
+                        <input type="radio" id="star2" name="rating" value="2" {% if log_entry.rating == 2 %}checked{% endif %} /><label for="star2" title="2 stars">★</label>
+                        <input type="radio" id="star1" name="rating" value="1" {% if log_entry.rating == 1 %}checked{% endif %} /><label for="star1" title="1 star">★</label>
+                    </div>
+                    <button type="button" id="clear-rating" class="btn btn-sm btn-outline-secondary" style="margin-left: 10px; vertical-align: middle; font-size:0.8em; padding: 3px 8px;" title="Clear Rating">Clear</button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-image"></i> Current Image</label>
+                    {% if log_entry.image_url %}
+                        <div class="current-image-container">
+                            <img src="{{ log_entry.image_url }}" alt="Current Log Image" class="current-image-display"/>
+                            <input type="checkbox" id="remove_current_image" name="remove_current_image" value="yes">
+                            <label for="remove_current_image" style="display: inline-block; font-weight: normal; margin-left: 5px;">Remove current image</label>
+                        </div>
+                    {% else %}
+                        <p>No image uploaded for this log.</p>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="log_image_edit" class="form-label"><i class="fas fa-camera"></i> Upload New Image (Optional, replaces current)</label>
+                    <input type="file" class="form-control" id="log_image_edit" name="log_image_edit" accept="image/*">
+                    <div id="log-edit-image-preview-container" class="image-preview-container">
+                         <img id="log-edit-image-preview" src="#" alt="New Image Preview" class="image-preview" style="display: none;"/>
+                         <button type="button" id="cancel-new-log-image-btn" class="btn btn-sm btn-outline-secondary remove-btn-style" style="display:none;">Cancel New Image</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes" class="form-label">Session Notes (Optional)</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="4" placeholder="e.g., Substituted chicken for tofu...">{{ log_entry.notes or '' }}</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary" style="margin-left: 10px;">Cancel Edit</a>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const clearRatingBtn = document.getElementById('clear-rating');
+            if (clearRatingBtn) {
+                clearRatingBtn.addEventListener('click', function() {
+                    const ratingInputs = document.querySelectorAll('input[name="rating"]');
+                    ratingInputs.forEach(input => input.checked = false);
+                });
+            }
+
+            const newImageInput = document.getElementById('log_image_edit');
+            const newImagePreview = document.getElementById('log-edit-image-preview');
+            const cancelNewImageBtn = document.getElementById('cancel-new-log-image-btn');
+
+            if (newImageInput && newImagePreview && cancelNewImageBtn) {
+                newImageInput.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            newImagePreview.src = e.target.result;
+                            newImagePreview.style.display = 'block';
+                            cancelNewImageBtn.style.display = 'inline-block';
+                        }
+                        reader.readAsDataURL(file);
+                    } else {
+                        newImagePreview.src = '#';
+                        newImagePreview.style.display = 'none';
+                        cancelNewImageBtn.style.display = 'none';
+                    }
+                });
+
+                cancelNewImageBtn.addEventListener('click', function() {
+                    newImageInput.value = ''; // Clear the file input
+                    newImagePreview.src = '#';
+                    newImagePreview.style.display = 'none';
+                    cancelNewImageBtn.style.display = 'none';
+                });
+            }
+        });
+    </script>
+</body>
+</html>

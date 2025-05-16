@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - KitchenLog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .log-detail-container { max-width: 800px; margin: 30px auto; }
+        .log-detail-card {
+            background-color: var(--white);
+            border-radius: 8px;
+            padding: 25px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .log-detail-card h2 { /* For section titles within the card */
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--light-color);
+            padding-bottom: 8px;
+            margin-top: 25px; 
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        .log-detail-card h2:first-child { margin-top: 0; }
+        .log-detail-card p { margin-bottom: 10px; font-size: 1rem; line-height: 1.6; }
+        .log-detail-card p strong { color: var(--dark-color); font-weight: 600; }
+        .log-detail-card pre {
+            background-color: #fdfdfd;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.95em;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 5px;
+        }
+        .log-image {
+            max-width: 100%;
+            max-height: 500px; /* Adjust as needed */
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid var(--light-grey);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: block; /* For margin auto to work if container is text-align center */
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .actions-bar { margin-top: 25px; text-align: right;}
+        .actions-bar .btn { margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-clipboard-check"></i> {{ title }}</h1>
+            <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
+                <a href="{{ url_for('main.view_logs') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to All Logs
+                </a>
+                <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm" style="margin-left:5px;">
+                    <i class="fas fa-home"></i> My Kitchen
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container log-detail-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="log-detail-card">
+            <h2>
+                Recipe: 
+                {% if log_entry.recipe_logged %}
+                    <a href="{{ url_for('main.view_recipe', recipe_id=log_entry.recipe_id) }}">{{ log_entry.recipe_logged.name }}</a>
+                {% else %}
+                    <em>Deleted Recipe</em>
+                {% endif %}
+            </h2>
+            <p><strong><i class="fas fa-calendar-alt"></i> Date Cooked:</strong> {{ log_entry.date_cooked.strftime('%A, %B %d, %Y') }}</p>
+            
+            {% if log_entry.duration_seconds is not none %}
+                <p><strong><i class="fas fa-clock"></i> Duration:</strong> {{ (log_entry.duration_seconds // 60) }} minutes</p>
+            {% endif %}
+            
+            {% if log_entry.rating %}
+                <p><strong><i class="fas fa-star"></i> Rating:</strong> 
+                    {% for i in range(log_entry.rating) %}<span style="color: #ffc107;">★</span>{% endfor %}
+                    {% for i in range(5 - log_entry.rating) %}<span style="color: #ccc;">★</span>{% endfor %}
+                    ({{ log_entry.rating }}/5)
+                </p>
+            {% endif %}
+            
+            {% if log_entry.notes %}
+                <h2 style="margin-top:20px;"><i class="fas fa-pencil-alt"></i> Notes</h2>
+                <pre>{{ log_entry.notes }}</pre>
+            {% endif %}
+
+            {% if log_entry.image_url %}
+                <h2 style="margin-top:20px;"><i class="fas fa-image"></i> Image</h2>
+                <img src="{{ log_entry.image_url }}" alt="Cooking Log Image for {{ log_entry.recipe_logged.name if log_entry.recipe_logged else 'this log' }}" class="log-image">
+            {% else %}
+                 <h2 style="margin-top:20px;"><i class="fas fa-image"></i> Image</h2>
+                <p><em>No image was uploaded for this log.</em></p>
+            {% endif %}
+
+            <div class="actions-bar">
+                 <a href="{{ url_for('main.edit_log', log_id=log_entry.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit This Log
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
