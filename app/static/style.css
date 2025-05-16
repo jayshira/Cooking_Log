@@ -855,9 +855,9 @@ body > .custom-alert {
 /* Styles for individual shared recipe items */
 .shared-recipe-item {
     display: flex;
-    align-items: center;
+    align-items: center; /* Align items vertically */
     padding: 12px 15px;
-    border-bottom: 1px solid #f0f0f0; /* Lighter border */
+    border-bottom: 1px solid #f0f0f0;
     cursor: pointer;
     transition: background-color 0.2s ease;
 }
@@ -865,24 +865,55 @@ body > .custom-alert {
     border-bottom: none;
 }
 .shared-recipe-item:hover {
-    background-color: var(--bg-light); /* Use a light background on hover */
+    background-color: var(--bg-light);
 }
 
 .shared-recipe-icon {
-    margin-right: 15px; /* Increased margin */
-    font-size: 1.4rem; /* Slightly adjusted icon size */
-    color: var(--primary-color); /* Use primary color for icon */
+    margin-right: 15px;
     flex-shrink: 0;
-    width: 25px; /* Ensure consistent width for icon area */
-    text-align: center;
+    width: 40px; /* Width of the PFP container */
+    height: 40px; /* Height of the PFP container */
+    display: flex; /* To center content if needed */
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Make the container circular */
+    overflow: hidden; /* Clip image to circle */
+    /* Remove the old icon-specific color and font-size from here if they were present */
 }
+
+/* Styles for actual image PFP in shared item */
+.shared-item-pfp-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover the area, might crop */
+    border-radius: 50%; /* Redundant due to parent but good practice */
+}
+
+/* Styles for default initial PFP in shared item */
+.shared-item-pfp-default {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--secondary-color); /* Your theme's green */
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem; /* Adjust size of initial */
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.shared-item-pfp-default span {
+    line-height: 1;
+}
+
 
 .shared-recipe-details {
     flex-grow: 1;
     overflow: hidden; 
 }
 .shared-recipe-name {
-    font-size: 0.95rem; /* Slightly smaller for compactness */
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--dark-color);
     margin: 0 0 3px 0; 
@@ -891,25 +922,24 @@ body > .custom-alert {
     text-overflow: ellipsis;
 }
 .shared-recipe-meta {
-    font-size: 0.8rem; /* Smaller meta text */
+    font-size: 0.8rem;
     color: var(--grey);
     margin: 0;
 }
 .shared-recipe-meta strong {
-    color: var(--dark-color); /* Keep username distinct */
+    color: var(--dark-color);
     font-weight: 500;
 }
 
 .shared-recipe-action {
-    margin-left: 12px; /* Increased margin */
+    margin-left: 12px;
     font-size: 0.85rem;
-    color: var(--light-grey); /* Lighter chevron */
+    color: var(--light-grey);
     transition: color 0.2s ease;
 }
 .shared-recipe-item:hover .shared-recipe-action {
-    color: var(--primary-color); /* Chevron color change on hover */
+    color: var(--primary-color);
 }
-
 
 /* Loading and no-recipes message styling */
 .popup-content .loading-message, /* For loading inside popup-content */

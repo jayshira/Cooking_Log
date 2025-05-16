@@ -1234,11 +1234,18 @@ async function fetchSharedRecipes() {
     try {
         const response = await fetch('/api/shared_recipes/my');
         if (!response.ok) {
+            // Handle specific errors like 401 for session expiry
+            if (response.status === 401) {
+                showTemporaryStatusMessage("Session expired. Please log in again.", "warning");
+                // Optionally redirect to login: window.location.href = '/auth/login';
+                return []; // Return empty to prevent further processing
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         return await response.json();
     } catch (error) {
         console.error("Error fetching shared recipes:", error);
+        showTemporaryStatusMessage("Could not load shared recipes. " + error.message, "danger");
         return [];
     }
 }
@@ -1247,16 +1254,21 @@ function displaySharedRecipes() {
     const sharedRecipesList = document.getElementById('shared-recipes-list');
     const noRecipesMessage = document.getElementById('no-recipes-message');
 
+    if (!sharedRecipesList || !noRecipesMessage) {
+        console.warn("Mailbox elements not found in DOM for displaySharedRecipes.");
+        return;
+    }
+
     // Show loading state
     sharedRecipesList.innerHTML = '<p class="loading-message" style="text-align: center; padding: 20px; color: var(--grey);"><i class="fas fa-spinner fa-spin"></i> Loading shared recipes...</p>';
-    noRecipesMessage.style.display = 'none'; // Hide no recipes message while loading
+    noRecipesMessage.style.display = 'none'; 
 
     fetchSharedRecipes().then(shared_recipes => {
         sharedRecipesList.innerHTML = ''; // Clear loading message
 
         if (shared_recipes.length === 0) {
             noRecipesMessage.style.display = 'block';
-            // sharedRecipesList remains empty if no recipes
+            noRecipesMessage.textContent = 'No shared recipes yet.'; // Reset message
         } else {
             noRecipesMessage.style.display = 'none';
             
@@ -1264,15 +1276,27 @@ function displaySharedRecipes() {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'shared-recipe-item';
                 
-                // Format date for better readability
                 const dateShared = new Date(shared_recipe.date_shared);
                 const formattedDate = dateShared.toLocaleDateString(undefined, {
                     year: 'numeric', month: 'short', day: 'numeric'
                 });
 
+                // Determine sharer's initial for default PFP
+                const sharerInitial = shared_recipe.sharer_username_for_initial 
+                                      ? shared_recipe.sharer_username_for_initial[0].toUpperCase() 
+                                      : 'S'; // Fallback initial
+
+                // Construct PFP element
+                let pfpElementHTML = '';
+                if (shared_recipe.sharer_pfp_url) {
+                    pfpElementHTML = `<img src="${shared_recipe.sharer_pfp_url}" alt="${shared_recipe.sharer_name}'s PFP" class="shared-item-pfp-img">`;
+                } else {
+                    pfpElementHTML = `<div class="shared-item-pfp-default"><span>${sharerInitial}</span></div>`;
+                }
+
                 itemDiv.innerHTML = `
                     <div class="shared-recipe-icon">
-                        <i class="fas fa-utensils"></i>
+                        ${pfpElementHTML}
                     </div>
                     <div class="shared-recipe-details">
                         <h4 class="shared-recipe-name">${shared_recipe.recipe_name}</h4>
@@ -1286,18 +1310,25 @@ function displaySharedRecipes() {
                 `;
                 
                 itemDiv.addEventListener('click', () => {
-                    window.open(`./view_recipe/${shared_recipe.recipe_id}`, '_blank');
+                    // Open the recipe view page in a new tab or current tab
+                    window.location.href = `/view_recipe/${shared_recipe.recipe_id}`;
+                    // To open in new tab: window.open(`/view_recipe/${shared_recipe.recipe_id}`, '_blank');
+                    
+                    // Close popup after clicking (optional)
+                    const mailboxPopup = document.getElementById('mailbox-popup');
+                    if (mailboxPopup) mailboxPopup.style.display = 'none';
                 });
                 sharedRecipesList.appendChild(itemDiv);
             });
         }
-    }).catch(error => {
-        console.error('Error fetching shared recipes:', error);
-        sharedRecipesList.innerHTML = ''; // Clear loading message on error
+    }).catch(error => { // Catch errors from fetchSharedRecipes promise
+        console.error('Error in displaySharedRecipes after fetch:', error);
+        sharedRecipesList.innerHTML = ''; 
         noRecipesMessage.textContent = 'Could not load shared recipes.';
         noRecipesMessage.style.display = 'block';
     });
 }
+
 
 
 // static/script.js
