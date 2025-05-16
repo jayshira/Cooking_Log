@@ -5,20 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Welcome - KitchenLog</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
   <style>
-      .card {
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-      padding: 2rem;
-      margin-bottom: 2rem;
+    body {
+      font-family: 'Poppins', sans-serif;
     }
-    .feature-card {
-      display: flex;
-      flex-direction: column;
+    .logo {
+      font-size: 2.8rem;
+      font-weight: 700;
+      letter-spacing: -1px;
+      display: inline-flex;
       align-items: center;
-      text-align: center;
-      margin-bottom: 2rem;
+      gap: 10px;
     }
     .feature-card img {
       width: 100%;
@@ -34,60 +33,58 @@
 <body>
   <header>
     <div class="container">
-      <h1 class="logo">🍳 KitchenLog</h1>
+      <h1 class="logo"><i class="fas fa-utensils"></i> <span style="color:#fff">Kitchen</span><span style="color:var(--light-color)">Log</span></h1>
       <p class="subtitle">Your all-in-one recipe companion – log, track, and analyze your cooking journey!</p>
-      <nav class="auth-buttons">
-        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Log In</a>
-        <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary">Sign Up</a>
+      <nav class="user-auth-nav">
+        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm">Log In</a>
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm">Sign Up</a>
       </nav>
     </div>
   </header>
 
   <main class="container">
-    <section class="intro-section card">
-      <h2>Welcome to KitchenLog</h2>
-      <p>KitchenLog is more than a recipe book – it's your smart kitchen assistant. Save all your delicious creations and gain insights into your cooking habits!</p>
+    <section class="intro-section card" style="text-align: center;">
+      <h2>Welcome to KitchenLog!</h2>
+      <p style="font-size: 1.1rem; color: var(--grey); margin-bottom: 25px;">
+        The ultimate companion for home chefs and culinary enthusiasts. <br>
+        Easily manage your recipes, track your cooking sessions, and share your creations.
+      </p>
+      <div style="margin-top: 20px;">
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-primary" style="margin-right: 10px; padding: 12px 25px; font-size: 1.1rem;">Get Started - Sign Up</a>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary" style="padding: 12px 25px; font-size: 1.1rem;">Already a Member? Log In</a>
+      </div>
     </section>
 
     <section class="features-section">
       <h2 style="text-align:center; margin-bottom:2rem;">✨ Key Features</h2>
 
       <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Recipe+Logging+Image" alt="Recipe Logging feature image">
-        <h3>📚 Recipe Logging</h3>
-        <p>Save unlimited recipes with ingredients, step-by-step instructions, and personal notes.</p>
+        <img src="https://via.placeholder.com/600x300?text=Recipe+Logging+Image" alt="Recipe Logging">
+        <h3><i class="fas fa-book-open"></i> Organize Recipes</h3>
+        <p>Store all your favorite recipes with ingredients, instructions, and personal notes.</p>
       </div>
 
       <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Smart+Search+Image" alt="Smart Search feature image">
-        <h3>🔍 Smart Search</h3>
-        <p>Find recipes easily by ingredient, category, or tags using our powerful search engine.</p>
+        <img src="https://via.placeholder.com/600x300?text=Cooking+Tracker+Image" alt="Cooking Tracker">
+        <h3><i class="fas fa-utensils"></i> Track Cooking</h3>
+        <p>Log your cooking sessions, maintain streaks, and reflect with personal feedback.</p>
       </div>
 
       <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Cooking+Stats+Image" alt="Cooking Stats feature image">
-        <h3>📊 Cooking Statistics</h3>
-        <p>Track your cooking frequency, most-used ingredients, and discover your favorite styles.</p>
+        <img src="https://via.placeholder.com/600x300?text=Stats+Insight+Image" alt="Cooking Stats">
+        <h3><i class="fas fa-chart-line"></i> Gain Insights</h3>
+        <p>Discover patterns in your cooking habits with smart statistics and visualizations.</p>
       </div>
 
       <div class="feature-card card">
-        <img src="https://via.placeholder.com/600x300?text=Sharing+Feature+Image" alt="Sharing feature image">
-        <h3>🤝 Easy Sharing</h3>
-        <p>Instantly share your recipes with friends or on social media with just a click.</p>
+        <img src="https://via.placeholder.com/600x300?text=Share+Feature+Image" alt="Sharing Feature">
+        <h3><i class="fas fa-share-alt"></i> Share & Discover</h3>
+        <p>Share your culinary creations and get inspired by others in the community.</p>
       </div>
-    </section>
-
-    <section class="cta-section card" style="text-align:center;">
-      <h3>Join KitchenLog Today</h3>
-      <p style="margin-bottom: 2.5rem;">Start building your recipe collection and watch your culinary journey grow!</p>
-       <div style="margin-bottom: 2.5rem;"></div>
-        <a href="{{ url_for('auth.signup') }}" class="btn btn-accent">Create an Account</a>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">Log In</a>
-        </div>
     </section>
   </main>
 
-  <footer class="footer">
+  <footer>
     <div class="container">
       <p>&copy; 2025 KitchenLog Team. Built with ❤️ for home chefs.</p>
     </div>

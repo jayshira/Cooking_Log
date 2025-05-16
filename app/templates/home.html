@@ -1,39 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <!-- Add this meta tag -->
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>My Kitchen - KitchenLog</title>
-        <!-- Other head elements -->
-        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    </head>
-<body>
-    <header>
-        <div class="container">
-             <!-- Changed H1 -->
-            <h1>🍳 My Kitchen</h1>
-            <p class="subtitle">Your recipes, logs, and stats</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>My Kitchen - KitchenLog</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
 
-            <!-- User Authentication Links (Keep as is) -->
-            <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
-                {% if current_user.is_authenticated %}
-                    <span style="margin-right: 15px; color: white; opacity: 0.9;">
-                        Welcome, {{ current_user.username }}!
-                    </span>
-                    <!-- Removed redundant My Kitchen/Dashboard links, added Logout -->
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                {% else %}
-                    <!-- Should not happen on this page due to @login_required, but keep for safety -->
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Log In</a>
-                    <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);">Sign Up</a>
-                {% endif %}
-            </nav>
-        </div>
-    </header>
+    .logo {
+      font-size: 2.6rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .logo .icon {
+      font-size: 1.3em;
+      color: var(--light-color);
+    }
+
+    .logo .brand-highlight {
+      color: var(--light-color);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <!-- 깔끔한 로고 스타일 -->
+      <h1 class="logo">
+        <i class="fas fa-utensils icon"></i>
+        <span>My <span class="brand-highlight">Kitchen</span></span>
+      </h1>
+      <p class="subtitle">Your recipes, logs, and stats</p>
+
+      <!-- 유저 인증 영역 -->
+      <nav class="user-auth-nav">
+        {% if current_user.is_authenticated %}
+          <span style="margin-right: 15px; color: white; opacity: 0.9;">
+            Welcome, {{ current_user.username }}!
+          </span>
+          <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px;">Log In</a>
+          <a href="{{ url_for('auth.signup') }}" class="btn btn-secondary btn-sm">Sign Up</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
 
     <div class="container">
         <!-- Flash Messages (Keep as is) -->
