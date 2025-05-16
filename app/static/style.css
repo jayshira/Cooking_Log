@@ -447,6 +447,46 @@ body > .custom-alert {
     border: 1px solid #eee; /* Subtle border */
 }
 
+/* --- Ingridient Addition --- */
+.ingredient-input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#ingredient-input {
+  flex: 1;
+  padding: 8px;
+  min-width: 200px;
+}
+
+#ingredient-list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 0;
+}
+
+#ingredient-list li {
+  background-color: var(--bg-light);
+  border: 1px solid var(--light-grey);
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+#ingredient-list li button {
+  background: none;
+  border: none;
+  color: red;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+
 /* --- Recipe List & Cards --- */
 .recipe-list {
     display: grid;

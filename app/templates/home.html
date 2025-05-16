@@ -146,13 +146,18 @@
                          </label> <!-- Clarified label -->
                          <input type="number" id="recipe-time" required min="1">
                      </div>
-                     <div class="form-group">
-                         <label for="recipe-ingredients">
+                    <div class="form-group">
+                        <label for="ingredient-input">
                             Ingredients
-                            <i class="fas fa-info-circle info-icon" title="List ingredients one per line or separate with commas."></i>
-                         </label>
-                         <textarea id="recipe-ingredients" placeholder="List ingredients, one per line or separated by commas" required></textarea>
-                     </div>
+                            <i class="fas fa-info-circle info-icon" title="Add one ingredient at a time. e.g., sugar 20g"></i>
+                        </label>
+                        <div class="ingredient-input-group">
+                            <input type="text" id="ingredient-input" placeholder="e.g., sugar 20g">
+                            <button type="button" id="add-ingredient-btn" class="btn btn-sm">Add</button>
+                        </div>
+                        <ul id="ingredient-list"></ul>
+                        <input type="hidden" name="ingredients" id="ingredients-hidden">
+                    </div>
                      <div class="form-group">
                          <label for="recipe-instructions">
                             Instructions
