@@ -21,11 +21,11 @@
             <!-- User Authentication Links (Keep as is) -->
             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
                 {% if current_user.is_authenticated %}
-                    <span style="margin-right: 15px; color: white; opacity: 0.9;">
+                    <span style="margin-right: 15px; color: white; opacity: 0.9;" id ="welcome-message">
                         Welcome, {{ current_user.username }}!
                     </span>
                     <!-- Removed redundant My Kitchen/Dashboard links, added Logout -->
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" id="logout" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 {% else %}
                     <!-- Should not happen on this page due to @login_required, but keep for safety -->
                     <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm" style="margin-right: 5px; background-color: var(--accent-color);">Log In</a>
@@ -83,11 +83,11 @@
 
         <div class="tabs">
             <!-- Renamed Recipes tab, adjusted others -->
-            <div class="tab active" data-tab="my-recipes">My Recipes</div>
-            <div class="tab" data-tab="add">Add Recipe</div>
+            <div class="tab active" data-tab="my-recipes" id="my-recipes-button">My Recipes</div>
+            <div class="tab" data-tab="add" id="add-recipe-button">Add Recipe</div>
             <!-- Changed Stats tab name -->
-            <div class="tab" data-tab="recipe-stats">Recipe Stats</div>
-            <div class="tab" data-tab="share">Share Recipe</div>
+            <div class="tab" data-tab="recipe-stats" id="recipe-stats-button">Recipe Stats</div>
+            <div class="tab" data-tab="share" id="share-recipe-button">Share Recipe</div>
             <div class="faketab mailbox-icon" id="mailbox-icon"><i class="fas fa-envelope"></i></div>
             <!-- Remove disabled tabs as this page requires login -->
         </div>
@@ -107,53 +107,53 @@
 
         <!-- Add Recipe Tab (Keep as is) -->
         <div id="add" class="tab-content">
-            <div class="card">
-                <h2><i class="fas fa-plus-circle"></i> Add New Recipe</h2>
-                <form id="recipe-form">
-                    <!-- Form content remains the same -->
-                    <div class="form-group">
-                        <label for="recipe-name">Recipe Name</label>
-                        <input type="text" id="recipe-name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="recipe-category">Category</label>
-                        <select id="recipe-category" required>
-                            <option value="">Select a category</option>
-                            <option value="breakfast">Breakfast</option>
-                            <option value="lunch">Lunch</option>
-                            <option value="dinner">Dinner</option>
-                            <option value="dessert">Dessert</option>
-                            <option value="snack">Snack</option>
-                            <option value="beverage">Beverage</option>
-                            <option value="side">Side Dish</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="recipe-time">Total Time (minutes)</label> <!-- Clarified label -->
-                        <input type="number" id="recipe-time" required min="1">
-                    </div>
-                    <div class="form-group">
-                        <label for="recipe-ingredients">Ingredients</label>
-                        <textarea id="recipe-ingredients" placeholder="List ingredients, one per line or separated by commas" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="recipe-instructions">Instructions</label>
-                        <textarea id="recipe-instructions" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Upload Image (Optional)</label>
-                        <div class="file-upload" id="file-upload">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <p>Click or drag image here</p> <!-- Updated text -->
-                            <input type="file" id="recipe-image" accept="image/*">
-                        </div>
-                        <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
-                    </div>
-                    <button type="submit" class="btn"><i class="fas fa-save"></i> Save Recipe</button>
-                </form>
-            </div>
-        </div>
+             <div class="card">
+                 <h2><i class="fas fa-plus-circle"></i> Add New Recipe</h2>
+                 <form id="recipe-form">
+                     <!-- Form content remains the same -->
+                     <div class="form-group">
+                         <label for="recipe-name">Recipe Name</label>
+                         <input type="text" id="recipe-name" required>
+                     </div>
+                     <div class="form-group">
+                         <label for="recipe-category">Category</label>
+                         <select id="recipe-category" required>
+                             <option value="">Select a category</option>
+                             <option value="breakfast">Breakfast</option>
+                             <option value="lunch">Lunch</option>
+                             <option value="dinner">Dinner</option>
+                             <option value="dessert">Dessert</option>
+                             <option value="snack">Snack</option>
+                             <option value="beverage">Beverage</option>
+                             <option value="side">Side Dish</option>
+                             <option value="other">Other</option>
+                         </select>
+                     </div>
+                     <div class="form-group">
+                         <label for="recipe-time">Total Time (minutes)</label> <!-- Clarified label -->
+                         <input type="number" id="recipe-time" required min="1">
+                     </div>
+                     <div class="form-group">
+                         <label for="recipe-ingredients">Ingredients</label>
+                         <textarea id="recipe-ingredients" placeholder="List ingredients, one per line or separated by commas" required></textarea>
+                     </div>
+                     <div class="form-group">
+                         <label for="recipe-instructions">Instructions</label>
+                         <textarea id="recipe-instructions" required></textarea>
+                     </div>
+                     <div class="form-group">
+                         <label>Upload Image (Optional)</label>
+                         <div class="file-upload" id="file-upload">
+                             <i class="fas fa-cloud-upload-alt"></i>
+                             <p>Click or drag image here</p> <!-- Updated text -->
+                             <input type="file" id="recipe-image" accept="image/*">
+                         </div>
+                         <div id="file-upload-status" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
+                     </div>
+                     <button type="submit" class="btn"><i class="fas fa-save" id="save-recipe"></i> Save Recipe</button>
+                 </form>
+             </div>
+         </div>
 
         <!-- **** MODIFIED Recipe Stats Tab **** -->
         <div id="recipe-stats" class="tab-content">
