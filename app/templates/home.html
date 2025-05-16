@@ -224,16 +224,21 @@
                     </div>
                 </div>
                 <!-- Share to user -->
-                <div class="share-to-user">
+                <div class="share-to-user" style="margin-top: 20px;">
                     <p class="share-label">Share to user:</p>
                     <div class="share-actions">
-                        <div style="position: relative; flex: 2; with: 100%;">
+                        <div style="position: relative; flex: 2; width: 100%;">
                             <input type="text" id="user-search" placeholder="Search users..." autocomplete="off">
                             <ul id="suggestions" class="dropdown"></ul>
                         </div>
                         <button id="add-to-whitelist-btn" class="btn btn-secondary btn-sm">Add to Whitelist</button>
                     </div>
+                    <div id="response-message" style="margin-top: 10px; font-size: 0.9em; color: var(--grey);"></div>
                 </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- /.container -->
 
     <!-- Mailbox Popup -->
     <div id="mailbox-popup" class="mailbox-popup">
@@ -246,8 +251,6 @@
             <div id="shared-recipes-list"></div> <!-- Changed ul to div -->
         </div>
     </div>
-
-    <!-- /.container -->
 
     <!-- Pass user ID AND log stats data to JS -->
     <!-- **** CORRECTED SCRIPT BLOCK **** -->
