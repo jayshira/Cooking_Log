@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - KitchenLog</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .profile-container { max-width: 900px; margin: 30px auto; }
+        .profile-header { display: flex; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--light-grey); }
+        .profile-avatar { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-right: 20px; border: 3px solid var(--light-color); background-color: #e9ecef; /* Placeholder bg */ }
+        .profile-avatar.default { background-color: var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; }
+        .profile-info h2 { margin: 0 0 5px 0; font-size: 1.8rem; color: var(--dark-color); border-bottom: none; }
+        .profile-info p { margin: 0; color: var(--grey); font-size: 1rem; }
+
+        .profile-forms-grid { display: grid; grid-template-columns: 1fr; gap: 30px; }
+        @media (min-width: 768px) { /* Apply two columns on medium screens and up */
+            .profile-forms-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .form-section .card h3 { font-size: 1.3rem; margin-top:0; color: var(--primary-color); border-bottom: 1px solid var(--light-color); padding-bottom:10px; margin-bottom:20px;}
+        
+        .form-control-file {
+            display: block;
+            width: 100%;
+            padding: .375rem .75rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #495057;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            border-radius: .25rem;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        }
+        .form-control-file:focus {
+            border-color: var(--primary-color);
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(255, 123, 84, 0.25);
+        }
+        .form-control-file.is-invalid { border-color: var(--danger-border); }
+
+
+        #profile-image-preview-container { text-align: center; margin-top: 10px; margin-bottom: 10px; }
+        #profile-image-preview { max-width: 150px; max-height: 150px; display: none; border-radius: 5px; border: 1px solid #ddd; margin: 0 auto; }
+        .current-profile-pic-display { max-width: 150px; max-height: 150px; display: block; border-radius: 5px; border: 1px solid #ddd; margin: 0 auto 10px; }
+        
+        .form-control.is-invalid, textarea.is-invalid, select.is-invalid {
+            border-color: var(--danger-border);
+        }
+        .invalid-feedback {
+            display: none; 
+            width: 100%;
+            margin-top: .25rem;
+            font-size: .875em;
+            color: var(--danger-text);
+        }
+        .form-control.is-invalid ~ .invalid-feedback,
+        textarea.is-invalid ~ .invalid-feedback,
+        select.is-invalid ~ .invalid-feedback,
+        .form-control-file.is-invalid ~ .invalid-feedback { 
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+             <h1><i class="fas fa-user-circle"></i> {{ title }}</h1>
+             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
+                <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to My Kitchen
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container profile-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 20px;">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="profile-header">
+            {% if user.profile_image_url %}
+                <img src="{{ user.profile_image_url }}" alt="{{ user.username }}'s profile picture" class="profile-avatar">
+            {% else %}
+                <div class="profile-avatar default">
+                    <i class="fas fa-user"></i>
+                </div>
+            {% endif %}
+            <div class="profile-info">
+                <h2>{{ user.username }}</h2>
+                <p>{{ user.email }}</p>
+                <!-- MODIFIED LINE BELOW -->
+                <p style="font-size: 0.85em; margin-top: 5px;">
+                    Member since: 
+                    {% if user.date_joined %}
+                        {{ user.date_joined.strftime('%B %d, %Y') }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <div class="profile-forms-grid">
+            <div class="form-section">
+                <div class="card">
+                    <h3><i class="fas fa-id-card"></i> Update Profile Details</h3>
+                    <form method="POST" action="{{ url_for('main.profile') }}" enctype="multipart/form-data" novalidate>
+                        {{ update_profile_form.hidden_tag() }} 
+                        
+                        <div class="form-group">
+                            {{ update_profile_form.username.label(class="form-label") }}
+                            {{ update_profile_form.username(class="form-control" + (" is-invalid" if update_profile_form.username.errors else "")) }}
+                            {% if update_profile_form.username.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in update_profile_form.username.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ update_profile_form.email.label(class="form-label") }}
+                            {{ update_profile_form.email(class="form-control" + (" is-invalid" if update_profile_form.email.errors else "")) }}
+                            {% if update_profile_form.email.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in update_profile_form.email.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ update_profile_form.profile_picture.label(class="form-label") }}
+                            {% if user.profile_image_url %}
+                                <p style="font-size:0.9em; margin-bottom:5px;">Current picture:</p>
+                                <img src="{{ user.profile_image_url }}" alt="Current profile picture" class="current-profile-pic-display">
+                            {% endif %}
+                            <div id="profile-image-preview-container">
+                                <img id="profile-image-preview" src="#" alt="New Profile Image Preview"/>
+                            </div>
+                            {{ update_profile_form.profile_picture(class="form-control-file" + (" is-invalid" if update_profile_form.profile_picture.errors else "")) }}
+                            {% if update_profile_form.profile_picture.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in update_profile_form.profile_picture.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {{ update_profile_form.submit_profile(class="btn btn-primary w-100") }}
+                    </form>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="card">
+                    <h3><i class="fas fa-key"></i> Change Password</h3>
+                    <form method="POST" action="{{ url_for('main.profile') }}" novalidate>
+                        {{ change_password_form.hidden_tag() }} 
+                        
+                        <div class="form-group">
+                            {{ change_password_form.current_password.label(class="form-label") }}
+                            {{ change_password_form.current_password(class="form-control" + (" is-invalid" if change_password_form.current_password.errors else "")) }}
+                            {% if change_password_form.current_password.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in change_password_form.current_password.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ change_password_form.new_password.label(class="form-label") }}
+                            {{ change_password_form.new_password(class="form-control" + (" is-invalid" if change_password_form.new_password.errors else "")) }}
+                            {% if change_password_form.new_password.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in change_password_form.new_password.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            {{ change_password_form.confirm_new_password.label(class="form-label") }}
+                            {{ change_password_form.confirm_new_password(class="form-control" + (" is-invalid" if change_password_form.confirm_new_password.errors else "")) }}
+                            {% if change_password_form.confirm_new_password.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in change_password_form.confirm_new_password.errors %}<span>{{ error }}</span>{% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {{ change_password_form.submit_password(class="btn btn-primary w-100") }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const profileImageInput = document.querySelector('input[name="profile_picture"]');
+            const profileImagePreview = document.getElementById('profile-image-preview');
+
+            if (profileImageInput && profileImagePreview) {
+                profileImageInput.addEventListener('change', function(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        if (!file.type.startsWith('image/')){
+                            alert('Please select an image file (jpg, png, gif).');
+                            profileImageInput.value = ''; 
+                            profileImagePreview.src = '#';
+                            profileImagePreview.style.display = 'none';
+                            return;
+                        }
+                        if (file.size > 2 * 1024 * 1024) { // 2MB
+                            alert('File is too large. Maximum size is 2MB.');
+                            profileImageInput.value = ''; 
+                            profileImagePreview.src = '#';
+                            profileImagePreview.style.display = 'none';
+                            return;
+                        }
+
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            profileImagePreview.src = e.target.result;
+                            profileImagePreview.style.display = 'block';
+                        }
+                        reader.readAsDataURL(file);
+                    } else {
+                        profileImagePreview.src = '#';
+                        profileImagePreview.style.display = 'none';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

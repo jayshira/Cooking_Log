@@ -18,12 +18,14 @@
             <h1>🍳 My Kitchen</h1>
             <p class="subtitle">Your recipes, logs, and stats</p>
 
-            <!-- User Authentication Links (Keep as is) -->
+                        <!-- User Authentication Links (Keep as is) -->
             <nav class="user-auth-nav" style="margin-top: 15px; text-align: center;">
                 {% if current_user.is_authenticated %}
                     <span style="margin-right: 15px; color: white; opacity: 0.9;">
                         Welcome, {{ current_user.username }}!
                     </span>
+                    <!-- ADDED PROFILE LINK -->
+                    <a href="{{ url_for('main.profile') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color); margin-right: 5px;"><i class="fas fa-user-edit"></i> My Profile</a>
                     <!-- Removed redundant My Kitchen/Dashboard links, added Logout -->
                     <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm" style="background-color: var(--accent-color);"><i class="fas fa-sign-out-alt"></i> Logout</a>
                 {% else %}
@@ -222,41 +224,54 @@
         <!-- **** END MODIFIED Recipe Stats Tab **** -->
 
         <!-- Share Tab (Keep as is) -->
-        <div id="share" class="tab-content">
-            <div class="card">
-                <h2><i class="fas fa-share-alt"></i> Share Your Recipes</h2>
-                <p>Select one of your recipes to generate sharing links.</p>
-                <div class="form-group">
-                    <label for="share-recipe">Choose Recipe</label>
-                    <select id="share-recipe"><option value="">Select a recipe</option></select>
-                    <input type="hidden" id="selected-user-id">
-                </div>
-                <div id="share-preview" style="display: none;">
-                    <!-- Share Preview content remains the same -->
-                    <div class="recipe-card" style="max-width: 400px; margin-bottom: 20px;">
-                        <div class="recipe-img" id="share-image"></div>
-                        <div class="recipe-info">
-                            <h3 class="recipe-title" id="share-title"></h3>
-                            <div class="recipe-meta">
-                                <span id="share-category"></span>
-                                <span id="share-time"></span>
-                            </div>
+<div id="share" class="tab-content">
+    <div class="card">
+        <h2><i class="fas fa-share-alt"></i> Share Your Recipes</h2>
+        <p>Select one of your recipes to generate sharing links or manage its access.</p>
+        <div class="form-group">
+            <label for="share-recipe">Choose Recipe</label>
+            <select id="share-recipe"><option value="">Select a recipe</option></select>
+        </div>
+
+        <div id="share-preview" style="display: none;">
+            <div class="recipe-card" style="max-width: 100%; margin-bottom: 20px; background-color: #f9f9f9; padding:15px; border-radius: 5px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="recipe-img" id="share-image" style="width: 100px; height: 100px; flex-shrink: 0; border-radius: 5px;"></div>
+                    <div class="recipe-info">
+                        <h3 class="recipe-title" id="share-title" style="margin-bottom: 5px; font-size: 1.2rem;"></h3>
+                        <div class="recipe-meta" style="font-size: 0.9rem;">
+                            <span id="share-category"></span>
+                            <span id="share-time"></span>
                         </div>
                     </div>
-                    <p style="margin-bottom: 15px;">Share via:</p>
-                    <div class="share-options">
-                        <button class="share-btn facebook" onclick="shareRecipe('facebook')"><i class="fab fa-facebook-f"></i> Facebook</button>
-                        <button class="share-btn twitter" onclick="shareRecipe('twitter')"><i class="fab fa-twitter"></i> Twitter</button>
-                        <button class="share-btn whatsapp" onclick="shareRecipe('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                        <button class="share-btn email" onclick="shareRecipe('email')"><i class="fas fa-envelope"></i> Email</button>
-                    </div>
-                    <div id="response-message"></div>
-                    <button id="add-to-whitelist-btn">Add to Whitelist</button>
-                    <input type="text" id="user-search" placeholder="Search users..." autocomplete="off"> 
-                    <ul id="suggestions" class="dropdown"></ul>
                 </div>
             </div>
+
+            <!-- Social Sharing Links -->
+            <h4 style="margin-top: 25px; margin-bottom: 10px; font-size: 1rem;">Share via Link:</h4>
+            <div class="share-options">
+                <button class="share-btn facebook" onclick="shareRecipe('facebook')"><i class="fab fa-facebook-f"></i> Facebook</button>
+                <button class="share-btn twitter" onclick="shareRecipe('twitter')"><i class="fab fa-twitter"></i> Twitter</button>
+                <button class="share-btn whatsapp" onclick="shareRecipe('whatsapp')"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                <button class="share-btn email" onclick="shareRecipe('email')"><i class="fas fa-envelope"></i> Email</button>
+            </div>
+
+            <!-- Whitelist Management -->
+            <hr style="margin: 30px 0;">
+            <h4 style="margin-bottom: 10px; font-size: 1rem;">Grant Access to Specific Users (Whitelist):</h4>
+            <p style="font-size: 0.9em; color: var(--grey); margin-bottom: 15px;">
+                Users added to the whitelist can view and cook this recipe, even if it's not theirs.
+            </p>
+            <div class="form-group">
+                <label for="user-search" class="form-label">Search for User to Add to Whitelist:</label>
+                <input type="text" id="user-search" class="form-control" placeholder="Enter username (min. 2 chars)..." autocomplete="off">
+                <ul id="suggestions" class="dropdown"></ul>
+            </div>
+            <button id="add-to-whitelist-btn" class="btn btn-primary" style="margin-bottom: 10px;"><i class="fas fa-user-plus"></i> Add to Whitelist</button>
+            <div id="response-message" style="font-size: 0.9em; margin-top: 10px;"></div>
         </div>
+    </div>
+</div>
     </div>
 
     <!-- Mailbox Popup -->

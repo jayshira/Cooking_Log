@@ -766,7 +766,7 @@ body > .custom-alert {
 /* Styles for individual shared recipe items */
 .shared-recipe-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start; ;
     padding: 12px 15px;
     border-bottom: 1px solid #f0f0f0; /* Lighter border */
     cursor: pointer;
@@ -780,17 +780,37 @@ body > .custom-alert {
 }
 
 .shared-recipe-icon {
-    margin-right: 15px; /* Increased margin */
-    font-size: 1.4rem; /* Slightly adjusted icon size */
-    color: var(--primary-color); /* Use primary color for icon */
+    margin-right: 12px; /* Adjusted from 15px if avatar is smaller */
     flex-shrink: 0;
-    width: 25px; /* Ensure consistent width for icon area */
-    text-align: center;
+    width: 40px; /* Width for the avatar container */
+    height: 40px; /* Height for the avatar container */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Make it circular */
+    overflow: hidden; /* Clip image to circle */
+    background-color: var(--light-grey); /* Fallback bg */
 }
+.shared-recipe-sharer-avatar { /* Common style for both img and div.default */
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* For <img> to cover the circle */
+}
+
+.shared-recipe-sharer-avatar.default {
+    background-color: var(--accent-color); /* Or primary-color */
+    color: white;
+    font-size: 1.2rem; /* Size of the fas fa-user icon */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 
 .shared-recipe-details {
     flex-grow: 1;
     overflow: hidden; 
+    padding-top: 2px;
 }
 .shared-recipe-name {
     font-size: 0.95rem; /* Slightly smaller for compactness */

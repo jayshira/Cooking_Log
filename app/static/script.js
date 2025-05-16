@@ -14,66 +14,83 @@ let currentRecipes = []; // Cache recipes locally for search/share dropdowns
 // --- API Helper Functions ---
 
 async function fetchRecipes() {
-    // API endpoint now fetches recipes for the current user (based on session cookie)
+    console.log("fetchRecipes: Initiating fetch for /api/recipes");
     try {
-        const response = await fetch('/api/recipes'); // No user ID needed in URL
+        const response = await fetch('/api/recipes');
+        console.log(`fetchRecipes: Response status: ${response.status}`);
         if (!response.ok) {
-            if (response.status === 401) { // Unauthorized
+            const errorText = await response.text(); // Get raw error text
+            console.error(`fetchRecipes: HTTP error! Status: ${response.status}, Body: ${errorText}`);
+            if (response.status === 401) {
                  alert("Your session may have expired. Please log in again.");
-                 window.location.href = '/login'; // Redirect to login
-                 return [];
+                 window.location.href = '/auth/login'; // Corrected login URL
             }
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Try to parse as JSON for more structured error, but fallback to text
+            let errorDetail = errorText;
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorDetail = errorJson.error || errorJson.details || errorText;
+            } catch (e) { /* ignore if not json */ }
+            throw new Error(`Server error: ${response.status} - ${errorDetail}`);
         }
         const recipes = await response.json();
-        currentRecipes = recipes;
+        console.log("fetchRecipes: Successfully fetched and parsed recipes. Count:", recipes.length);
+        currentRecipes = recipes; // Update global cache
         return recipes;
     } catch (error) {
-        console.error("Error fetching recipes:", error);
-        alert("Failed to load your recipes.");
-        currentRecipes = [];
-        return [];
+        console.error("fetchRecipes: CATCH BLOCK - Error fetching recipes:", error.message, error.stack);
+        // alert(`Failed to load your recipes. ${error.message}. Check console for details.`);
+        currentRecipes = []; // Reset global cache on error
+        return []; // Return empty array so UI can show "no recipes" or "error"
     }
 }
 
 async function fetchApi(url, options = {}) {
     try {
         const response = await fetch(url, options);
-        // ... basic response handling ...
         if (!response.ok) {
-             // ... error extraction ...
+            let errorMessage = 'Unknown error';
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorData.message || JSON.stringify(errorData);
+            } catch (e) {
+                errorMessage = await response.text() || `Status ${response.status}`;
+            }
+            console.error(`fetchApi: HTTP error! Status: ${response.status}, URL: ${url}, Message: ${errorMessage}`);
+            if (response.status === 401 && (options.method !== 'GET' || url !== '/api/recipes')) { // Avoid double alert from fetchRecipes
+                 alert("Your session may have expired or you are unauthorized. Please log in again.");
+                 window.location.href = '/auth/login'; // Corrected login URL
+            }
             throw new Error(`HTTP error! Status: ${response.status} - ${errorMessage}`);
         }
-        return data; // Parsed JSON or text
+        
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            return await response.json();
+        }
+        return await response.text();
     } catch (error) {
         console.error(`API Error (${options.method || 'GET'} ${url}):`, error);
         throw error; // Rethrow for specific handling
     }
 }
-// Example usage:
-// const recipes = await fetchApi('/api/recipes');
-// const newRecipe = await fetchApi('/api/recipes', { method: 'POST', ... });
 
-// static/script.js
 function showTemporaryStatusMessage(message, type = 'info', duration = 3000) {
     const statusDiv = document.createElement('div');
     statusDiv.className = `alert alert-${type}`;
     statusDiv.textContent = message;
     
-    // Base styles
     statusDiv.style.position = 'fixed';
     statusDiv.style.top = '20px';
     statusDiv.style.left = '50%';
     statusDiv.style.transform = 'translateX(-50%)';
     statusDiv.style.zIndex = '1050';
-    statusDiv.style.padding = '10px 20px'; // Ensure padding
-    statusDiv.style.borderRadius = '5px'; // Ensure border-radius
-    statusDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)'; // Add some shadow
+    statusDiv.style.padding = '10px 20px'; 
+    statusDiv.style.borderRadius = '5px'; 
+    statusDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)'; 
     statusDiv.style.opacity = '1';
-    statusDiv.style.transition = 'opacity 0.5s ease-out'; // For fade-out
+    statusDiv.style.transition = 'opacity 0.5s ease-out';
 
-    // Apply alert-specific styles if not already covered by global .alert classes
-    // This ensures the background and text colors are set correctly if .alert-{type} isn't globally sufficient
     switch (type) {
         case 'success':
             statusDiv.style.backgroundColor = 'var(--success-bg)'; statusDiv.style.color = 'var(--success-text)'; statusDiv.style.borderColor = 'var(--success-border)';
@@ -93,79 +110,59 @@ function showTemporaryStatusMessage(message, type = 'info', duration = 3000) {
     document.body.appendChild(statusDiv);
 
     setTimeout(() => {
-        statusDiv.style.opacity = '0'; // Start fade-out
-        // Remove from DOM after transition completes
+        statusDiv.style.opacity = '0'; 
         setTimeout(() => {
             if (statusDiv.parentNode) {
                 statusDiv.parentNode.removeChild(statusDiv);
             }
-        }, 500); // Match transition duration
+        }, 500); 
     }, duration);
 }
 
 
-function copyRecipeLink() {
+function copyRecipeLink() { // This function seems unused in current home.html, but kept if needed elsewhere
     const linkInput = document.getElementById('recipe-share-link');
     if (!linkInput || !linkInput.value) {
         showTemporaryStatusMessage('No recipe link available to copy.', 'warning');
         return;
     }
 
-    linkInput.focus(); // It's often helpful to focus the element first
-    linkInput.select(); // Select the text field's content
-    linkInput.setSelectionRange(0, 99999); // For mobile device compatibility
+    linkInput.focus(); 
+    linkInput.select(); 
+    linkInput.setSelectionRange(0, 99999); 
 
-    let copied = false; // Flag to track if copy was successful
-
-    // --- Try using execCommand first (legacy method) ---
     try {
-        // Attempt to copy using the older execCommand
-        copied = document.execCommand('copy');
-        if (copied) {
+        if (document.execCommand('copy')) {
             showTemporaryStatusMessage('Link copied to clipboard!', 'success');
         } else {
-            // execCommand is available but returned false (might happen in some cases)
             throw new Error('execCommand returned false');
         }
     } catch (err) {
         console.warn('execCommand copy failed, attempting Clipboard API fallback.', err);
-
-        // --- Fallback using the modern Clipboard API ---
-        // Check if the Clipboard API is available
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(linkInput.value)
                 .then(() => {
-                    // This function runs if writeText() is successful
-                    copied = true; // Mark as copied using the modern API
                     showTemporaryStatusMessage('Link copied to clipboard!', 'success');
                 })
                 .catch(clipboardErr => {
-                    // This function runs if writeText() fails (e.g., permissions)
                     console.error('Clipboard API fallback failed:', clipboardErr);
                     showTemporaryStatusMessage('Failed to copy link automatically.', 'danger');
-                    // Provide clearer user instruction if both methods fail
                     alert('Could not copy link automatically. Please select the link text and copy it manually (Ctrl+C or Cmd+C).');
                 });
         } else {
-            // Clipboard API is not supported by the browser
             console.error('Clipboard API not available.');
             showTemporaryStatusMessage('Failed to copy link. Browser does not support clipboard operations.', 'danger');
             alert('Could not copy link automatically. Please select the link text and copy it manually (Ctrl+C or Cmd+C).');
         }
     } finally {
-        // Deselect the text after attempting copy, regardless of success/failure
-        // Use a small timeout to ensure deselection happens after potential async clipboard operations finish
         setTimeout(() => {
-            window.getSelection()?.removeAllRanges(); // Deselect using optional chaining
-            // Optionally blur the input field to remove focus visually
-            // linkInput.blur();
-        }, 100); // 100ms delay
+            window.getSelection()?.removeAllRanges();
+        }, 100);
     }
 }
 
 
 async function addRecipeToServer(recipeData) {
-    // Get the CSRF token from the meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (!csrfToken) {
         console.error("CSRF token not found in meta tag!");
@@ -174,163 +171,121 @@ async function addRecipeToServer(recipeData) {
     }
 
     try {
-        const response = await fetch('/api/recipes', {
+        const newRecipe = await fetchApi('/api/recipes', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken // Include the token in the headers
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify(recipeData),
         });
-        // ... (rest of the function remains the same) ...
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            if (response.status === 401) { /* ... */ }
-            // Check specifically for 400, often related to CSRF or validation issues
-            if (response.status === 400 && errorData.error && errorData.error.toLowerCase().includes('csrf')) {
-                 alert("Action failed: Security token mismatch. Please refresh the page and try again.");
-                 return null;
-            }
-            throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
-        }
-        const newRecipe = await response.json();
         currentRecipes.unshift(newRecipe);
         return newRecipe;
     } catch (error) {
-        console.error("Error adding recipe:", error);
-        alert(`Failed to save recipe: ${error.message}`);
+        alert(`Failed to save recipe: ${error.message.replace("HTTP error! Status: \\d+ - ", "")}`);
         return null;
     }
 }
 
 async function deleteRecipeFromServer(recipeId) {
-    // Get the CSRF token from the meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
      if (!csrfToken) {
         console.error("CSRF token not found in meta tag!");
         alert("Action failed: Security token missing. Please refresh the page.");
-        return false; // Indicate failure
+        return false;
     }
 
     try {
-        const response = await fetch(`/api/recipes/${recipeId}`, {
+        await fetchApi(`/api/recipes/${recipeId}`, {
             method: 'DELETE',
-            headers: { // Add headers object
-                'X-CSRFToken': csrfToken // Include the token
+            headers: {
+                'X-CSRFToken': csrfToken
             }
         });
-        // ... (rest of the function remains the same) ...
-         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-             if (response.status === 401) { /* ... */ }
-             if (response.status === 403) { /* ... */ }
-             if (response.status === 409) { /* ... */ }
-              if (response.status === 400 && errorData.error && errorData.error.toLowerCase().includes('csrf')) {
-                 alert("Action failed: Security token mismatch. Please refresh the page and try again.");
-                 return false;
-             }
-            throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
-        }
         currentRecipes = currentRecipes.filter(r => r.id !== recipeId);
         return true;
-    } catch (error) {
-        console.error(`Error deleting recipe ${recipeId}:`, error);
-        alert(`Failed to delete recipe: ${error.message}`);
+    }
+    catch (error) {
+        alert(`Failed to delete recipe: ${error.message.replace("HTTP error! Status: \\d+ - ", "")}`);
         return false;
     }
 }
 
-/* COMMENTED OUT SINCE TWO OF THE SAME FUNCTION IS MADE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) - jason*/
-// async function deleteRecipeFromServer(recipeId) {
-//     // No changes needed here, authorization is handled by backend
-//      try {
-//         const response = await fetch(`/api/recipes/${recipeId}`, {
-//             method: 'DELETE',
-//         });
-//         if (!response.ok) {
-//             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-//              if (response.status === 401) {
-//                  alert("Your session may have expired. Please log in again.");
-//                  window.location.href = '/login';
-//                  return false;
-//              }
-//              if (response.status === 403) { // Forbidden
-//                 throw new Error(`Authorization error: ${errorData.error}`);
-//              }
-//              if (response.status === 409) { // Conflict (e.g., recipe has logs)
-//                  throw new Error(`${errorData.error}`); // Display the specific error from backend
-//              }
-//             throw new Error(`HTTP error! status: ${response.status} - ${errorData.error}`);
-//         }
-//         currentRecipes = currentRecipes.filter(r => r.id !== recipeId);
-//         return true;
-//     } catch (error) {
-//         console.error(`Error deleting recipe ${recipeId}:`, error);
-//         // Display specific error message from backend if available
-//         alert(`Failed to delete recipe: ${error.message}`);
-//         return false;
-//     }
-// }
-
 // --- UI Rendering ---
 
-// Function to render a single recipe card
 function renderRecipeCard(recipe) {
-    const recipeCard = document.createElement('div');
-    recipeCard.className = 'recipe-card';
-    recipeCard.dataset.id = recipe.id;
+    try {
+        const recipeCard = document.createElement('div');
+        recipeCard.className = 'recipe-card';
+        recipeCard.dataset.id = recipe.id;
 
-    const ingredientsPreview = (Array.isArray(recipe.ingredients) ? recipe.ingredients : [])
-        .slice(0, 4).join(', ') + (recipe.ingredients.length > 4 ? '...' : '');
-    
-    const imageStyle = recipe.image
-        ? `background-image: url(${recipe.image});`
-        : 'background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color));';
+        const ingredients = recipe.ingredients || [];
+        const ingredientsPreview = (Array.isArray(ingredients) ? ingredients : [])
+            .slice(0, 4).join(', ') + (ingredients.length > 4 ? '...' : '');
+        
+        const imageStyle = recipe.image
+            ? `background-image: url(${encodeURI(recipe.image)});`
+            : 'background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color));';
 
-    recipeCard.innerHTML = `
-        <div class="recipe-img" style="${imageStyle}"></div>
-        <div class="recipe-info">
-            <h3 class="recipe-title">${recipe.name}</h3>
-            <div class="recipe-meta">
-                <span><i class="fas fa-tag category-icon"></i> ${recipe.category}</span>
-                <span><i class="fas fa-clock time-icon"></i> ${recipe.time} mins</span>
+        const recipeName = recipe.name || 'Untitled Recipe';
+        const recipeCategory = recipe.category || 'Uncategorized';
+        const recipeTime = recipe.time || 0;
+        const recipeUserId = recipe.user_id;
+
+
+        recipeCard.innerHTML = `
+            <div class="recipe-img" style="${imageStyle}"></div>
+            <div class="recipe-info">
+                <h3 class="recipe-title">${recipeName}</h3>
+                <div class="recipe-meta">
+                    <span><i class="fas fa-tag category-icon"></i> ${recipeCategory}</span>
+                    <span><i class="fas fa-clock time-icon"></i> ${recipeTime} mins</span>
+                </div>
+                <p class="recipe-ingredients-preview">
+                    <strong>Ingredients:</strong> ${ingredientsPreview || 'No ingredients listed'}
+                </p>
+                <div class="recipe-actions">
+                    <a href="/view_recipe/${recipe.id}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                    ${typeof CURRENT_USER_ID !== 'undefined' && recipeUserId === CURRENT_USER_ID ? `
+                    <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <a href="/start_cooking/${recipe.id}" class="btn btn-success btn-sm">
+                        <i class="fas fa-utensils"></i> Cook
+                    </a>
+                    <button class="btn btn-danger btn-sm" onclick="deleteRecipe(${recipe.id})">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                    ` : ''}
+                </div>
             </div>
-            <p class="recipe-ingredients-preview">
-                <strong>Ingredients:</strong> ${ingredientsPreview || 'No ingredients listed'}
-            </p>
-            <div class="recipe-actions">
-                <!-- View Button (always visible) -->
-                <a href="/view_recipe/${recipe.id}" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-eye"></i> View
-                </a>
-
-                <!-- Edit Button (only for owner) -->
-                ${typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID ? `
-                <button class="btn btn-primary btn-sm" onclick="editRecipe(${recipe.id})">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <a href="/start_cooking/${recipe.id}" class="btn btn-success btn-sm">
-                    <i class="fas fa-utensils"></i> Cook
-                </a>
-                <button class="btn btn-danger btn-sm" onclick="deleteRecipe(${recipe.id})">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
-                ` : ''}
-            </div>
-        </div>
-    `;
-    return recipeCard;
+        `;
+        return recipeCard;
+    } catch (e) {
+        console.error("Error in renderRecipeCard for recipe:", recipe, e);
+        const errorCard = document.createElement('div');
+        errorCard.className = 'recipe-card';
+        errorCard.innerHTML = `<div class="recipe-info"><h3 class="recipe-title" style="color:red;">Error displaying recipe</h3><p>${(recipe && recipe.name) || (recipe && 'ID: '+recipe.id) || 'Unknown Recipe'}</p></div>`;
+        return errorCard;
+    }
 }
 
-
-// Load recipes into the UI and Share dropdown
 async function loadRecipes() {
+    console.log("loadRecipes: Function CALLED.");
     const recipeList = document.getElementById('recipe-list');
     const shareRecipeSelect = document.getElementById('share-recipe');
 
-    // Clear previous content and show loading indicators
+    if (!recipeList) {
+        console.error("loadRecipes: CRITICAL - recipe-list element NOT FOUND in DOM! Aborting.");
+        return;
+    }
+    console.log("loadRecipes: recipe-list element found.");
+
     recipeList.innerHTML = '<p style="grid-column: 1/-1; text-align: center;"><i class="fas fa-spinner fa-spin"></i> Loading your recipes...</p>';
-    // Check if shareRecipeSelect exists before manipulating
+    console.log("loadRecipes: 'Loading...' message displayed.");
+
     if (shareRecipeSelect) {
         shareRecipeSelect.innerHTML = '<option value="">Loading...</option>';
         shareRecipeSelect.disabled = true;
@@ -340,69 +295,106 @@ async function loadRecipes() {
         sharePreview.style.display = 'none';
     }
 
-    const recipes = await fetchRecipes(); // Fetches recipes for the logged-in user
 
-    recipeList.innerHTML = ''; // Clear loading indicator
+    let recipes = [];
+    try {
+        console.log("loadRecipes: Awaiting fetchRecipes()...");
+        recipes = await fetchRecipes(); 
+        console.log("loadRecipes: fetchRecipes() completed. Recipes count:", recipes.length);
+    } catch (error) { 
+        console.error("loadRecipes: CATCH BLOCK - Error awaiting fetchRecipes():", error);
+        recipeList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--danger-text);">An error occurred while loading recipes. Please check the console and try refreshing.</p>';
+        if (shareRecipeSelect) shareRecipeSelect.disabled = true;
+        if (typeof updateStats === "function") updateStats(); else console.warn("loadRecipes: updateStats function not available.");
+        if (typeof checkShareDropdown === "function") checkShareDropdown(); else console.warn("loadRecipes: checkShareDropdown function not available.");
+        return; 
+    }
+
+    console.log("loadRecipes: Clearing 'Loading...' message.");
+    recipeList.innerHTML = ''; 
+
     if (shareRecipeSelect) {
-        shareRecipeSelect.innerHTML = '<option value="">Select a recipe to share</option>'; // Reset dropdown
+        shareRecipeSelect.innerHTML = '<option value="">Select a recipe to share</option>';
+        if (recipes.length > 0) {
+            let hasOwnedRecipes = false;
+            recipes.forEach(recipe => {
+                if (typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID) {
+                    const option = document.createElement('option');
+                    option.value = recipe.id;
+                    option.textContent = recipe.name;
+                    shareRecipeSelect.appendChild(option);
+                    hasOwnedRecipes = true;
+                }
+            });
+            shareRecipeSelect.disabled = !hasOwnedRecipes;
+        } else {
+            shareRecipeSelect.disabled = true;
+        }
     }
 
     if (recipes.length === 0) {
-        recipeList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--grey);">You haven\'t added any recipes yet. Use the "Add Recipe" tab!</p>';
-        if (shareRecipeSelect) {
-            shareRecipeSelect.disabled = true; // Keep disabled if no recipes
+        console.log("loadRecipes: No recipes to display.");
+        if (!recipeList.textContent.toLowerCase().includes("error")) {
+             recipeList.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--grey);">You haven\'t added any recipes yet. Use the "Add Recipe" tab!</p>';
         }
     } else {
+        console.log("loadRecipes: Rendering recipe cards...");
         recipes.forEach(recipe => {
-            const recipeCard = renderRecipeCard(recipe);
-            recipeList.appendChild(recipeCard);
-
-            // Add to share dropdown only if the user owns the recipe and the select exists
-             if (shareRecipeSelect && typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID) {
-                const option = document.createElement('option');
-                option.value = recipe.id;
-                option.textContent = recipe.name;
-                shareRecipeSelect.appendChild(option);
-             }
+            try {
+                const recipeCard = renderRecipeCard(recipe); 
+                recipeList.appendChild(recipeCard);
+            } catch (renderError) {
+                console.error("loadRecipes: Error rendering recipe card for recipe:", recipe, renderError);
+            }
         });
-         // Enable share dropdown only if options were added and the select exists
-         if (shareRecipeSelect) {
-             shareRecipeSelect.disabled = shareRecipeSelect.options.length <= 1;
-         }
+        console.log("loadRecipes: Finished rendering cards.");
     }
 
-    // Update stats based on the fetched recipes
-    updateStats();
-    checkShareDropdown(); // Ensure consistency after potential deletion/reload
+    console.log("loadRecipes: Calling updateStats().");
+    if (typeof updateStats === "function" && typeof LOG_STATS_DATA !== 'undefined') {
+        updateStats();
+    } else {
+        console.warn("loadRecipes: updateStats function or LOG_STATS_DATA not available.");
+    }
+
+    console.log("loadRecipes: Calling checkShareDropdown().");
+    if (typeof checkShareDropdown === "function") {
+        checkShareDropdown();
+    } else {
+        console.warn("loadRecipes: checkShareDropdown function not available.");
+    }
+    console.log("loadRecipes: Function COMPLETED.");
 }
 
-// Check share dropdown state (helper function)
 function checkShareDropdown() {
     const shareRecipeSelect = document.getElementById('share-recipe');
-    if (!shareRecipeSelect) return; // Exit if the dropdown doesn't exist on the page
+    if (!shareRecipeSelect) return;
 
     const currentShareId = shareRecipeSelect.value;
     const sharePreview = document.getElementById('share-preview');
 
-    if (currentShareId && !currentRecipes.some(r => r.id == currentShareId)) {
+    const recipeExists = currentRecipes.some(r => r.id == currentShareId);
+
+    if (currentShareId && !recipeExists) {
          if (sharePreview) sharePreview.style.display = 'none';
-         shareRecipeSelect.value = '';
-         shareRecipeSelect.disabled = shareRecipeSelect.options.length <= 1;
-    } else if (currentShareId && sharePreview) {
-        // Refresh preview if still valid
+         shareRecipeSelect.value = ''; 
+         shareRecipeSelect.disabled = shareRecipeSelect.options.length <= 1 || !currentRecipes.some(r => typeof CURRENT_USER_ID !== 'undefined' && r.user_id === CURRENT_USER_ID);
+    } else if (currentShareId && sharePreview && recipeExists) {
          displaySharePreview(currentShareId);
-    } else if (sharePreview) {
+    } else if (sharePreview) { 
         sharePreview.style.display = 'none';
+    }
+    if (!currentRecipes.some(r => typeof CURRENT_USER_ID !== 'undefined' && r.user_id === CURRENT_USER_ID)) {
+        shareRecipeSelect.disabled = true;
     }
 }
 
 // --- Event Handlers ---
 
-// Handle form submission
 async function handleFormSubmit(event) {
     event.preventDefault();
+    console.log("handleFormSubmit: Form submission initiated.");
 
-    // Get form values (same as before)
     const name = document.getElementById('recipe-name').value.trim();
     const category = document.getElementById('recipe-category').value;
     const timeInput = document.getElementById('recipe-time').value;
@@ -410,86 +402,86 @@ async function handleFormSubmit(event) {
     const instructions = document.getElementById('recipe-instructions').value.trim();
     const imageInput = document.getElementById('recipe-image');
 
-    // Validation (same as before)
-    // ...
-
+    if (!name || !category || !timeInput || !ingredientsText || !instructions) {
+        alert('Please fill in all required fields: Name, Category, Time, Ingredients, and Instructions.');
+        console.warn("handleFormSubmit: Validation failed - missing fields.");
+        return;
+    }
     const time = parseInt(timeInput, 10);
-    // ... more validation ...
+    if (isNaN(time) || time <= 0) {
+        alert('Please enter a valid time (must be a number greater than 0).');
+        console.warn("handleFormSubmit: Validation failed - invalid time.");
+        return;
+    }
 
     const ingredientsList = ingredientsText.split(/[\n,]+/).map(i => i.trim()).filter(i => i);
+    if (ingredientsList.length === 0) {
+        alert('Please list at least one ingredient.');
+        console.warn("handleFormSubmit: Validation failed - no ingredients.");
+        return;
+    }
 
     const form = document.getElementById('recipe-form');
     const isEditing = form.dataset.editingId;
+    console.log(`handleFormSubmit: Mode: ${isEditing ? 'Editing recipe ID ' + isEditing : 'Adding new recipe'}`);
 
-    // Base recipe data, DO NOT include image initially
     const recipeData = {
         name,
         category,
         time,
         ingredients: ingredientsList,
         instructions,
-        // date: new Date().toISOString().split('T')[0], // Backend handles date on creation, less needed on update
-        // image: null // <-- REMOVE THIS INITIAL NULL VALUE
     };
 
     const submitButton = event.target.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
-    // Flag to track if a new image was processed
-    let newImageProcessed = false;
-
-    // Handle image ONLY IF a new file is selected
     if (imageInput.files.length > 0) {
-        // Create a promise to handle FileReader async operation
+        console.log("handleFormSubmit: Processing new image.");
         const imagePromise = new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = function(e) {
-                recipeData.image = e.target.result; // Add image data ONLY if read successfully
-                newImageProcessed = true;
-                resolve(); // Resolve the promise after setting image data
+                recipeData.image = e.target.result; 
+                console.log("handleFormSubmit: Image read successfully.");
+                resolve(); 
             };
-            reader.onerror = function() {
-                console.error("Error reading file");
-                // Decide if you want to proceed without image or reject
-                // alert("Error reading image file. Proceeding without updating image.");
-                // reject(new Error("Error reading image file")); // Option 1: Stop the process
-                resolve(); // Option 2: Continue without the new image
+            reader.onerror = function(error) {
+                console.error("handleFormSubmit: Error reading image file.", error);
+                alert("Error reading image file. The recipe will be saved without this new image.");
+                resolve(); 
             };
             reader.readAsDataURL(imageInput.files[0]);
         });
 
-        // Wait for the image processing to complete before saving
         try {
             await imagePromise;
-            await saveRecipe(recipeData, isEditing, submitButton);
-        } catch (error) {
-            // Handle FileReader error if promise was rejected
-            alert(`Failed to process image: ${error.message}`);
-            postSaveActions(null, submitButton); // Indicate failure
+        } catch (error) { 
+            alert(`Failed to process image: ${error.message}. Proceeding without image update.`);
+            console.error("handleFormSubmit: Image promise rejected (unexpected).", error);
         }
-
     } else {
-        // No new file selected, proceed to save without image data
-        // The 'image' key will NOT be in recipeData
-        await saveRecipe(recipeData, isEditing, submitButton);
+        console.log("handleFormSubmit: No new image selected.");
     }
+    
+    await saveRecipe(recipeData, isEditing, submitButton);
+    console.log("handleFormSubmit: saveRecipe call completed.");
 }
 
 async function saveRecipe(recipeData, isEditing, submitButton) {
     let savedRecipe;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (!csrfToken) {
+        console.error("saveRecipe: CSRF token not found!");
+        alert("Action failed: Security token missing. Please refresh the page.");
+        postSaveActions(null, submitButton, isEditing); 
+        return;
+    }
+
     try {
         if (isEditing) {
-            // Update existing recipe
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            if (!csrfToken) {
-                console.error("CSRF token not found in meta tag!");
-                alert("Action failed: Security token missing. Please refresh the page.");
-                submitButton.disabled = false;
-                return;
-            }
-        
-            const response = await fetch(`/api/recipes/${isEditing}`, {
+            console.log(`saveRecipe: Updating recipe ID ${isEditing}`);
+            savedRecipe = await fetchApi(`/api/recipes/${isEditing}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -497,44 +489,34 @@ async function saveRecipe(recipeData, isEditing, submitButton) {
                 },
                 body: JSON.stringify(recipeData)
             });
-        
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-        
-            savedRecipe = await response.json();
-            const index = currentRecipes.findIndex(r => r.id == isEditing);
+            const index = currentRecipes.findIndex(r => r.id == isEditing); 
             if (index !== -1) {
                 currentRecipes[index] = savedRecipe;
             }
+            console.log(`saveRecipe: Recipe ID ${isEditing} updated.`);
         } else {
-            // ADD NEW recipe (POST)
-            savedRecipe = await addRecipeToServer(recipeData);
+            console.log("saveRecipe: Adding new recipe.");
+            savedRecipe = await addRecipeToServer(recipeData); 
+            console.log("saveRecipe: New recipe added.", savedRecipe);
         }
         
-        
+        postSaveActions(savedRecipe, submitButton, isEditing);
 
-        postSaveActions(savedRecipe, submitButton);
     } catch (error) {
-        console.error("Error saving recipe:", error);
-        alert(`Failed to save recipe: ${error.message}`);
-        submitButton.disabled = false;
-        submitButton.innerHTML = isEditing ? 
-            '<i class="fas fa-save"></i> Update Recipe' : 
-            '<i class="fas fa-save"></i> Save Recipe';
+        console.error("saveRecipe: Error saving recipe:", error);
+        postSaveActions(null, submitButton, isEditing); 
     }
 }
 
-function postSaveActions(savedRecipe, submitButton) {
-    const wasEditing = document.getElementById('recipe-form').dataset.editingId; // Check *before* deleting
-
+function postSaveActions(savedRecipe, submitButton, wasEditing) {
     submitButton.disabled = false;
-    // After an add or update, the form resets to "Add Recipe" mode.
-    submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe'; 
+    submitButton.innerHTML = wasEditing ? 
+        '<i class="fas fa-save"></i> Update Recipe' : 
+        '<i class="fas fa-save"></i> Save Recipe';
     
     if (savedRecipe) {
+        console.log(`postSaveActions: Recipe "${savedRecipe.name}" ${wasEditing ? 'updated' : 'saved'} successfully.`);
         document.getElementById('recipe-form').reset();
-        // Clear the image file input and its status specifically
         const imageInput = document.getElementById('recipe-image');
         if (imageInput) imageInput.value = ''; 
         const fileUploadStatus = document.getElementById('file-upload-status');
@@ -543,85 +525,54 @@ function postSaveActions(savedRecipe, submitButton) {
             fileUploadStatus.className = '';
         }
 
-        if (wasEditing) { // If it was an edit, clear the editing state
+        if (wasEditing) { 
             delete document.getElementById('recipe-form').dataset.editingId;
         }
         
-        // Remove cancel button if it exists
         const cancelBtn = document.getElementById('cancel-edit-btn');
         if (cancelBtn) cancelBtn.remove();
         
-        // Reset form header to "Add New Recipe"
         document.querySelector('#add h2').innerHTML = '<i class="fas fa-plus-circle"></i> Add New Recipe';
+        submitButton.innerHTML = '<i class="fas fa-save"></i> Save Recipe';
         
-        loadRecipes(); // Reload recipes to show changes
-        switchTab('my-recipes'); // Switch to the recipes list tab
+        loadRecipes(); 
+        switchTab('my-recipes');
         
         showTemporaryStatusMessage(
             `Recipe "${savedRecipe.name}" ${wasEditing ? 'updated' : 'saved'} successfully!`, 
             'success'
         );
+    } else {
+        console.warn("postSaveActions: saveRecipe resulted in no savedRecipe object (likely an error).");
     }
 }
 
 
-// Delete recipe function (called by button)
 async function deleteRecipe(id) {
-    console.log(id);
-    // Find recipe name for confirmation message
-    const recipe = currentRecipes.find(r => r.id === id);
+    console.log(`deleteRecipe: Attempting to delete recipe ID ${id}`);
+    const recipe = currentRecipes.find(r => r.id === id); 
     const recipeName = recipe ? `"${recipe.name}"` : "this recipe";
 
     if (confirm(`Are you sure you want to delete ${recipeName}? This cannot be undone.`)) {
         const success = await deleteRecipeFromServer(id);
         if (success) {
-            // Reload recipes to update list, stats, and dropdowns
-            loadRecipes();
-            // No alert needed here, as the error function shows one on failure
+            console.log(`deleteRecipe: Recipe ID ${id} successfully deleted from server.`);
+            loadRecipes(); 
+            showTemporaryStatusMessage(`Recipe ${recipeName} deleted successfully.`, 'info');
+        } else {
+            console.warn(`deleteRecipe: Failed to delete recipe ID ${id} from server.`);
         }
+    } else {
+        console.log(`deleteRecipe: Deletion of recipe ID ${id} cancelled by user.`);
     }
 }
 
-/* COMMENTED FOR NOW SINCE THERE IS A NEW VIEW RECIPE PAGE (I WON'T DELETE THE OLD ONE BECAUSE IT'S NOT MY CODE) - jason */
-// View recipe details (uses local cache) 
-// function viewRecipe(id) {
-//     const recipe = currentRecipes.find(r => r.id == id);
-
-//     if (recipe) {
-//         let ingredientsString = "No ingredients listed.";
-//         if (recipe.ingredients && Array.isArray(recipe.ingredients) && recipe.ingredients.length > 0) {
-//             ingredientsString = "- " + recipe.ingredients.join('\n- ');
-//         } else if (typeof recipe.ingredients === 'string' && recipe.ingredients.trim()) {
-//              // Fallback if somehow it's still a string
-//              ingredientsString = recipe.ingredients;
-//         }
-
-//         alert(`
-// --------------------
-// RECIPE: ${recipe.name}
-// --------------------
-// Category: ${recipe.category}
-// Time: ${recipe.time} minutes
-// Added/Updated: ${recipe.date} ${recipe.author ? '\nAuthor: '+recipe.author : ''}
-
-// INGREDIENTS:
-// ${ingredientsString}
-
-// INSTRUCTIONS:
-// ${recipe.instructions || 'No instructions provided.'}
-// --------------------
-//         `);
-//     } else {
-//         alert('Recipe details not found. The list might be updating, please try again shortly.');
-//     }
-// }
-
-
-// Add function to handle editing
 function editRecipe(id) {
-    const recipe = currentRecipes.find(r => r.id == id);
+    console.log(`editRecipe: Editing recipe ID ${id}`);
+    const recipe = currentRecipes.find(r => r.id == id); 
     if (!recipe) {
         alert('Recipe not found for editing.');
+        console.warn(`editRecipe: Recipe ID ${id} not found in currentRecipes.`);
         return;
     }
 
@@ -629,8 +580,17 @@ function editRecipe(id) {
     document.getElementById('recipe-category').value = recipe.category;
     document.getElementById('recipe-time').value = recipe.time;
     document.getElementById('recipe-ingredients').value = Array.isArray(recipe.ingredients) ? 
-        recipe.ingredients.join('\n') : recipe.ingredients;
-    document.getElementById('recipe-instructions').value = recipe.instructions;
+        recipe.ingredients.join('\n') : (recipe.ingredients || '');
+    document.getElementById('recipe-instructions').value = recipe.instructions || '';
+    
+    const imageInput = document.getElementById('recipe-image');
+    if (imageInput) imageInput.value = ''; 
+    const fileUploadStatus = document.getElementById('file-upload-status');
+    if (fileUploadStatus) {
+        fileUploadStatus.textContent = recipe.image ? `Current image retained. Choose a new file to replace.` : 'No image. Choose a file to upload.';
+        fileUploadStatus.className = recipe.image ? 'info' : '';
+    }
+
 
     document.getElementById('recipe-form').dataset.editingId = id;
 
@@ -649,10 +609,11 @@ function editRecipe(id) {
     }
 
     switchTab('add');
+    document.getElementById('recipe-name').focus(); 
 }
 
-// Cancel edit mode
 function cancelEdit() {
+    console.log("cancelEdit: Edit mode cancelled.");
     const form = document.getElementById('recipe-form');
     delete form.dataset.editingId;
     form.reset();
@@ -668,126 +629,172 @@ function cancelEdit() {
         fileUploadStatus.textContent = '';
         fileUploadStatus.className = '';
     }
+    const imageInput = document.getElementById('recipe-image');
+    if (imageInput) imageInput.value = '';
+    switchTab('my-recipes'); 
 }
 
-// Override default alert
-// Override default alert
 const originalAlert = window.alert;
-window.alert = function(message, buttonsHTML) {
-    if (buttonsHTML) {
+window.alert = function(message, buttonsHTML) { 
+    if (buttonsHTML && typeof buttonsHTML === 'string') { 
+        console.warn("Custom alert with HTML buttons called. Ensure HTML is safe.");
+        const alertOverlay = document.createElement('div');
+        alertOverlay.className = 'custom-alert-overlay';
+        alertOverlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); z-index: 9999; display: flex;
+            align-items: center; justify-content: center;
+        `;
+
         const alertBox = document.createElement('div');
-        alertBox.className = 'custom-alert';
+        alertBox.className = 'custom-alert-box'; 
         alertBox.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            z-index: 10000;
-            max-width: 80%;
-            max-height: 80vh;
-            overflow: auto;
+            background: white; padding: 25px; border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 10000;
+            max-width: 90%; width: 400px; text-align: center;
+            color: #333;
         `;
 
         const messageDiv = document.createElement('div');
-        messageDiv.style.marginBottom = '15px';
+        messageDiv.style.marginBottom = '20px';
         messageDiv.style.whiteSpace = 'pre-wrap';
+        messageDiv.style.fontSize = '1.1em';
         messageDiv.textContent = message;
         alertBox.appendChild(messageDiv);
 
         const buttonsDiv = document.createElement('div');
-        buttonsDiv.style.textAlign = 'right';
-        buttonsDiv.innerHTML = buttonsHTML;
+        buttonsDiv.style.textAlign = 'right'; 
+        buttonsDiv.innerHTML = buttonsHTML; 
         alertBox.appendChild(buttonsDiv);
+        
+        alertOverlay.appendChild(alertBox);
+        document.body.appendChild(alertOverlay);
 
-        document.body.appendChild(alertBox);
+        buttonsDiv.querySelectorAll('button').forEach(button => {
+            if (!button.onclick) { 
+                button.addEventListener('click', () => closeCustomAlert(alertOverlay));
+            }
+        });
+        alertOverlay.addEventListener('click', (e) => {
+            if (e.target === alertOverlay) { 
+                closeCustomAlert(alertOverlay);
+            }
+        });
+
 
         const firstButton = buttonsDiv.querySelector('button');
         if (firstButton) firstButton.focus();
     } else {
+        console.log("Using original alert for message:", message)
         originalAlert(message);
     }
 };
 
-// Modify handleFormSubmit to handle update if editing
-// Inside handleFormSubmit, before calling addRecipeToServer, add this:
-const editingId = document.getElementById('recipe-form').dataset.editingId;
-if (editingId) {
-    newRecipeData.id = parseInt(editingId, 10);
-    // updateRecipeToServer(newRecipeData); // You’d implement this on the backend
-} else {
-    // continue with addRecipeToServer(newRecipeData);
+function closeCustomAlert(alertOverlay) {
+    if (alertOverlay && alertOverlay.parentNode) {
+        alertOverlay.parentNode.removeChild(alertOverlay);
+    }
 }
 
-// Display share preview (uses local cache)
+
 function displaySharePreview(recipeId) {
-     const sharePreview = document.getElementById('share-preview');
-     if (!sharePreview) return; // Exit if share section isn't on page
+    const sharePreview = document.getElementById('share-preview');
+    const userSearchInput = document.getElementById('user-search');
+    const addToWhitelistBtn = document.getElementById('add-to-whitelist-btn');
+    const responseMessage = document.getElementById('response-message');
 
-     const recipe = currentRecipes.find(r => r.id == recipeId); // Find in local cache
-
-     if (recipe) {
-         sharePreview.style.display = 'block';
-         document.getElementById('share-title').textContent = recipe.name;
-         document.getElementById('share-category').innerHTML = `<i class="fas fa-tag category-icon"></i> ${recipe.category}`;
-         document.getElementById('share-time').innerHTML = `<i class="fas fa-clock time-icon"></i> ${recipe.time} mins`;
-
-         const shareImage = document.getElementById('share-image');
-         if (shareImage) {
-             shareImage.style.backgroundImage = recipe.image
-                 ? `url(${recipe.image})`
-                 : 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))';
-         }
-     } else {
-         sharePreview.style.display = 'none';
-     }
-}
-
-// --- Stats and Charts (uses local cache) ---
-
-// Add toggle function
-function toggleChart(chartType) {
-    const state = chartStates[chartType];
-    const newState = state === 'all-time' ? 'this-month' : 'all-time';
-    
-    if (chartType === 'frequency') {
-        if (state === 'weekly') {
-            document.getElementById('frequency-title').textContent = 'Monthly Cooking Frequency';
-        } else {
-            document.getElementById('frequency-title').textContent = 'This Week\'s Cooking Frequency';
-        }
-        
-        chartStates[chartType] = state === 'monthly' ? 'weekly' : 'monthly';    
-    } else {
-        chartStates[chartType] = newState;
+    if (!sharePreview) {
+        console.warn("displaySharePreview: share-preview element not found.");
+        return;
     }
 
-    // Update button text
-    const button = event.target.closest('button');
+    if (!recipeId) { 
+        sharePreview.style.display = 'none';
+        if (userSearchInput) userSearchInput.disabled = true;
+        if (addToWhitelistBtn) addToWhitelistBtn.disabled = true;
+        if (responseMessage) responseMessage.textContent = '';
+        return;
+    }
+
+    const recipe = currentRecipes.find(r => r.id == recipeId); 
+
+    if (recipe) {
+        const isOwner = typeof CURRENT_USER_ID !== 'undefined' && recipe.user_id === CURRENT_USER_ID;
+
+        sharePreview.style.display = 'block';
+        document.getElementById('share-title').textContent = recipe.name;
+        document.getElementById('share-category').innerHTML = `<i class="fas fa-tag category-icon"></i> ${recipe.category}`;
+        document.getElementById('share-time').innerHTML = `<i class="fas fa-clock time-icon"></i> ${recipe.time} mins`;
+
+        const shareImage = document.getElementById('share-image');
+        if (shareImage) {
+            shareImage.style.backgroundImage = recipe.image
+                ? `url(${encodeURI(recipe.image)})`
+                : 'linear-gradient(135deg, var(--primary-color), var(--secondary-color))';
+        }
+        
+        if (userSearchInput) userSearchInput.disabled = !isOwner;
+        if (addToWhitelistBtn) addToWhitelistBtn.disabled = !isOwner;
+        if (responseMessage) {
+            responseMessage.textContent = isOwner ? '' : 'You can only manage sharing for your own recipes.';
+            responseMessage.className = isOwner ? '' : 'info'; // Use 'info' class for non-owner message
+        }
+
+    } else {
+        console.warn(`displaySharePreview: Recipe ID ${recipeId} not found in currentRecipes.`);
+        sharePreview.style.display = 'none';
+        if (userSearchInput) userSearchInput.disabled = true;
+        if (addToWhitelistBtn) addToWhitelistBtn.disabled = true;
+        if (responseMessage) {
+            responseMessage.textContent = 'Selected recipe not found.';
+            responseMessage.className = 'error';
+        }
+    }
+}
+
+
+// --- Stats and Charts ---
+
+function toggleChart(event, chartType) { 
+    const state = chartStates[chartType];
+    let newState;
+    
+    const titleElement = document.getElementById(`${chartType === 'frequency' ? 'frequency' : chartType}-title`);
+    const button = event.currentTarget; 
+
+    if (chartType === 'frequency') {
+        newState = state === 'monthly' ? 'weekly' : 'monthly';
+        if (titleElement) titleElement.textContent = newState === 'weekly' ? 'This Week\'s Cooking Frequency' : 'Monthly Cooking Frequency';
+    } else {
+        newState = state === 'all-time' ? 'this-month' : 'all-time';
+    }
+    chartStates[chartType] = newState;
+
     if (button) {
         const toggleText = chartType === 'frequency' ? 
-            (chartStates[chartType] === 'monthly' ? 'Show This Week' : 'Show Monthly View') :
-            (chartStates[chartType] === 'all-time' ? 'Show This Month' : 'Show All Time');
+            (newState === 'monthly' ? 'Show This Week' : 'Show Monthly View') :
+            (newState === 'all-time' ? 'Show This Month' : 'Show All Time');
         button.innerHTML = `<i class="fas fa-exchange-alt"></i> ${toggleText}`;
     }
 
-    // Update charts
+    if (typeof LOG_STATS_DATA === 'undefined') {
+        console.warn("toggleChart: LOG_STATS_DATA is undefined. Cannot update charts.");
+        return;
+    }
+
     if (chartType === 'top-recipes') {
-        const data = chartStates[chartType] === 'all-time' ? 
+        const data = newState === 'all-time' ? 
             LOG_STATS_DATA.top_recipes_data : 
             LOG_STATS_DATA.top_recipes_this_month_data;
         updateTopRecipesChart(data);
     } else if (chartType === 'frequency') {
-        if (chartStates[chartType] === 'monthly') {
+        if (newState === 'monthly') {
             updateMonthlyFrequencyChart(LOG_STATS_DATA.monthly_frequency_data);
         } else {
             updateWeeklyFrequencyChart(LOG_STATS_DATA.weekly_frequency_data);
         }
     } else if (chartType === 'top-rated') {
-        const data = chartStates[chartType] === 'all-time' ? 
+        const data = newState === 'all-time' ? 
             LOG_STATS_DATA.top_rated_data : 
             LOG_STATS_DATA.top_rated_this_month_data;
         updateTopRatedChart(data);
@@ -795,7 +802,20 @@ function toggleChart(chartType) {
 }
 
 function updateStats() {
-    // Use the global LOG_STATS_DATA parsed from the template
+    if (typeof LOG_STATS_DATA === 'undefined') {
+        console.warn("updateStats: LOG_STATS_DATA is not defined. Cannot update stats.");
+        const fieldsToClear = ['total-sessions', 'most-frequent-recipe', 'most-frequent-count', 'total-time-logged', 'average-rating'];
+        fieldsToClear.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = id.includes('count') ? '' : (id.includes('rating') ? 'N/A' : (id.includes('time') ? '0h 0m' : (id.includes('recipe') ? '-' : '0')));
+
+        });
+        if (topRecipesChart) updateTopRecipesChart([]);
+        if (frequencyChart) updateMonthlyFrequencyChart([]); 
+        if (topRatedChart) updateTopRatedChart([]);
+        return;
+    }
+    console.log("updateStats: Updating statistics display using LOG_STATS_DATA:", LOG_STATS_DATA);
     const stats = LOG_STATS_DATA;
 
     const totalSessionsEl = document.getElementById('total-sessions');
@@ -808,8 +828,8 @@ function updateStats() {
 
     if (mostFrequentRecipeEl) {
         if (stats.most_frequent_recipe && stats.most_frequent_recipe.name && stats.most_frequent_recipe.name !== '-' && stats.most_frequent_recipe.count > 0) {
-            mostFrequentRecipeEl.textContent = stats.most_frequent_recipe.name; // Access .name
-            if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe.count} logs)`; // Access .count
+            mostFrequentRecipeEl.textContent = stats.most_frequent_recipe.name;
+            if (mostFrequentCountEl) mostFrequentCountEl.textContent = `(${stats.most_frequent_recipe.count} logs)`;
         } else {
             mostFrequentRecipeEl.textContent = '-';
             if (mostFrequentCountEl) mostFrequentCountEl.textContent = '';
@@ -831,118 +851,72 @@ function updateStats() {
         }
     }
 
-    // Update the charts using the data from LOG_STATS_DATA
     if (document.getElementById('top-recipes-chart') && stats.top_recipes_data) {
         updateTopRecipesChart(stats.top_recipes_data);
+        chartStates['top-recipes'] = 'all-time'; 
     }
-    if (document.getElementById('top-rated-chart') && LOG_STATS_DATA.top_rated_data) {
-        updateTopRatedChart(LOG_STATS_DATA.top_rated_data);
+    if (document.getElementById('top-rated-chart') && stats.top_rated_data) {
+        updateTopRatedChart(stats.top_rated_data);
+        chartStates['top-rated'] = 'all-time'; 
     }
     if (document.getElementById('frequency-chart') && stats.monthly_frequency_data) {
         updateMonthlyFrequencyChart(stats.monthly_frequency_data);
+        chartStates['frequency'] = 'monthly'; 
+        const freqTitle = document.getElementById('frequency-title');
+        if (freqTitle) freqTitle.textContent = 'Monthly Cooking Frequency';
+        
+        // Ensure toggleChart function can find the button via its parent event listener.
+        // The button itself is in home.html:
+        // <button class="chart-toggle-btn btn btn-sm" onclick="toggleChart(event, 'frequency')">
+        // So, it should be fine.
     }
 }
 
 
 // --- Chart Update Functions --- 
-function updateCategoryChart(categoryCounts) {
+let categoryChart = null; 
+let timeChart = null; 
+
+function updateCategoryChart(categoryCounts) { 
     const ctx = document.getElementById('category-chart')?.getContext('2d');
-    if (!ctx) return; // Exit if canvas not found
+    if (!ctx) return; 
 
     const labels = Object.keys(categoryCounts);
     const data = Object.values(categoryCounts);
+    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87', '#6B5B95', '#F7CAC9', '#92A8D1', '#F4A261', '#E76F51', '#2A9D8F', '#264653'];
 
-    const backgroundColors = [
-        '#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87', '#6B5B95',
-        '#F7CAC9', '#92A8D1', '#F4A261', '#E76F51', '#2A9D8F', '#264653'
-    ];
-
-    if (categoryChart) {
-        categoryChart.destroy();
-    }
-
-    categoryChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Recipes per Category',
-                data: data,
-                backgroundColor: backgroundColors.slice(0, labels.length),
-                borderColor: 'var(--white)',
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right', labels: { boxWidth: 12, padding: 15 } },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.label || '';
-                            if (label) { label += ': '; }
-                            if (context.parsed !== null) { label += context.parsed; }
-                            return label;
-                        }
-                    }
-                }
-            }
-        }
-    });
+    if (categoryChart) categoryChart.destroy();
+    categoryChart = new Chart(ctx, { /* ... chart config ... */ });
 }
+
 function updateTopRecipesChart(topRecipesData) {
     const ctx = document.getElementById('top-recipes-chart')?.getContext('2d');
     if (!ctx) return;
+    if (!topRecipesData) topRecipesData = []; 
 
     const labels = topRecipesData.map(item => item.name);
     const data = topRecipesData.map(item => item.count);
+    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87'];
 
-    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; // Use first 5 theme colors
-
-    if (topRecipesChart) {
-        topRecipesChart.destroy(); // Destroy previous chart instance
-    }
-
+    if (topRecipesChart) topRecipesChart.destroy();
     topRecipesChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Number of Logs',
-                data: data,
+                label: 'Number of Logs', data: data,
                 backgroundColor: backgroundColors.slice(0, labels.length),
-                borderColor: backgroundColors.map(c => c + 'B3'),
-                borderWidth: 1,
-                borderRadius: 4,
+                borderColor: backgroundColors.map(c => c + 'B3').slice(0, labels.length),
+                borderWidth: 1, borderRadius: 4,
             }]
         },
         options: {
-            indexAxis: 'y', // Make it a horizontal bar chart
-            responsive: true,
-            maintainAspectRatio: false,
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
             scales: {
-                x: { // Note: x-axis for values in horizontal bar chart
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, color: 'var(--grey)' }, // Ensure integer steps if log counts are low
-                    grid: { color: '#eee' }
-                },
-                y: { // Note: y-axis for labels
-                    ticks: { color: 'var(--grey)' },
-                    grid: { display: false }
-                }
+                x: { beginAtZero: true, ticks: { stepSize: 1, color: 'var(--grey)' }, grid: { color: 'var(--chart-grid-color, #eee)' } },
+                y: { ticks: { color: 'var(--grey)' }, grid: { display: false } }
             },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return ` Logs: ${context.raw || 0}`;
-                        }
-                    }
-                }
-            }
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` Logs: ${ctx.raw || 0}` } } }
         }
     });
 }
@@ -950,216 +924,117 @@ function updateTopRecipesChart(topRecipesData) {
 function updateMonthlyFrequencyChart(frequencyData) {
     const ctx = document.getElementById('frequency-chart')?.getContext('2d');
     if (!ctx) return;
+    if (!frequencyData) frequencyData = [];
 
-    const labels = frequencyData.map(item => item.month); // Should be YYYY-MM sorted
+    const labels = frequencyData.map(item => item.month); 
     const data = frequencyData.map(item => item.count);
+    const barColor = '#FF7B54'; 
 
-    // Consistent color or cycle through a few
-    const barColor = '#FF7B54'; // Primary color
-
-    if (frequencyChart) {
-        frequencyChart.destroy(); // Destroy previous instance
-    }
-
+    if (frequencyChart) frequencyChart.destroy(); 
     frequencyChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Sessions Logged',
-                data: data,
-                backgroundColor: barColor,
-                borderColor: barColor + 'B3',
-                borderWidth: 1,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, color: 'var(--grey)' }, // Integer steps
-                    grid: { color: '#eee' }
-                },
-                x: {
-                    ticks: { color: 'var(--grey)' },
-                    grid: { display: false }
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                     callbacks: {
-                        title: function(context) {
-                             // Format title e.g., "October 2023"
-                             const [year, month] = context[0].label.split('-');
-                             const date = new Date(year, month - 1); // Month is 0-indexed
-                             return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-                        },
-                        label: function(context) {
-                            return ` Sessions: ${context.raw || 0}`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function updateTimeChart(recipes) {
-    const ctx = document.getElementById('time-chart')?.getContext('2d');
-    if (!ctx) return; // Exit if canvas not found
-
-    const timeRanges = [
-        { label: '0-15 min', min: 0, max: 15 }, { label: '16-30 min', min: 16, max: 30 },
-        { label: '31-45 min', min: 31, max: 45 }, { label: '46-60 min', min: 46, max: 60 },
-        { label: '60+ min', min: 61, max: Infinity }
-    ];
-
-    const timeData = timeRanges.map(range =>
-        recipes.filter(r => (r.time || 0) >= range.min && (r.time || 0) <= range.max).length
-    );
-    const labels = timeRanges.map(r => r.label);
-    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87'];
-
-    if (timeChart) {
-        timeChart.destroy();
-    }
-
-    timeChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Number of Recipes', data: timeData,
-                backgroundColor: backgroundColors, borderColor: backgroundColors.map(c => c + 'B3'),
+                label: 'Sessions Logged', data: data,
+                backgroundColor: barColor, borderColor: barColor + 'B3',
                 borderWidth: 1, borderRadius: 4,
             }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1, color: 'var(--grey)' }, grid: { color: '#eee' } },
+                y: { beginAtZero: true, ticks: { stepSize: 1, color: 'var(--grey)' }, grid: { color: 'var(--chart-grid-color, #eee)' } },
                 x: { ticks: { color: 'var(--grey)' }, grid: { display: false } }
             },
             plugins: {
                 legend: { display: false },
-                tooltip: { backgroundColor: 'var(--dark-color)', titleColor: 'var(--white)', bodyColor: 'var(--white)' }
+                tooltip: {
+                     callbacks: {
+                        title: (context) => {
+                             if (!context[0] || !context[0].label) return '';
+                             const [year, month] = context[0].label.split('-');
+                             const date = new Date(year, parseInt(month, 10) - 1); 
+                             return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+                        },
+                        label: ctx => ` Sessions: ${ctx.raw || 0}`
+                    }
+                }
             }
         }
     });
+}
+
+function updateTimeChart(recipes) { 
+    const ctx = document.getElementById('time-chart')?.getContext('2d');
+    if (!ctx) return; 
+    if (!recipes) recipes = [];
 }
 
 function updateWeeklyFrequencyChart(weeklyData) {
     const ctx = document.getElementById('frequency-chart')?.getContext('2d');
     if (!ctx) return;
+    if (!weeklyData) weeklyData = [];
 
-    const labels = weeklyData.map(item => {
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return days[item.day - 1]; // Adjust for 1-based index from database
-    });
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const labels = weeklyData.map(item => daysOfWeek[item.day]); 
     const data = weeklyData.map(item => item.count);
 
-    if (frequencyChart) {
-        frequencyChart.destroy();
-    }
-
+    if (frequencyChart) frequencyChart.destroy();
     frequencyChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Sessions Logged',
-                data: data,
-                backgroundColor: '#FF7B54',
-                borderColor: '#FF7B54B3',
-                borderWidth: 1,
-                borderRadius: 4,
+                label: 'Sessions Logged', data: data,
+                backgroundColor: '#FF7B54', borderColor: '#FF7B54B3',
+                borderWidth: 1, borderRadius: 4,
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { stepSize: 1, color: 'var(--grey)' },
-                    grid: { color: '#eee' }
-                },
-                x: {
-                    ticks: { color: 'var(--grey)' },
-                    grid: { display: false }
-                }
+                y: { beginAtZero: true, ticks: { stepSize: 1, color: 'var(--grey)' }, grid: { color: 'var(--chart-grid-color, #eee)' } },
+                x: { ticks: { color: 'var(--grey)' }, grid: { display: false } }
             },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        title: function(context) {
-                            const dayIndex = context[0].label;
-                            return ` ${dayIndex}`;
-                        }
-                    }
-                }
+                tooltip: { callbacks: { title: ctx => `${ctx[0]?.label || ''}`, label: ctx_1 => ` Sessions: ${ctx_1.raw || 0}` } }
             }
         }
     });
 }
 
-// Add new chart update functions
 function updateTopRatedChart(topRatedData) {
     const ctx = document.getElementById('top-rated-chart')?.getContext('2d');
     if (!ctx) return;
+    if (!topRatedData) topRatedData = [];
 
     const labels = topRatedData.map(item => item.name);
     const data = topRatedData.map(item => item.rating);
+    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; 
 
-    if (topRatedChart) {
-        topRatedChart.destroy();
-    }
-
-    const backgroundColors = ['#FF7B54', '#FFB26B', '#FFD56F', '#939B62', '#4E8C87']; // Use first 5 theme colors
-
+    if (topRatedChart) topRatedChart.destroy();
     topRatedChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Average Rating',
-                data: data,
+                label: 'Average Rating', data: data,
                 backgroundColor: backgroundColors.slice(0, labels.length),
-                borderColor: backgroundColors.map(c => c + 'B3'),
-                borderWidth: 1,
-                borderRadius: 4,
+                borderColor: backgroundColors.map(c => c + 'B3').slice(0, labels.length),
+                borderWidth: 1, borderRadius: 4,
             }]
         },
         options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
             scales: {
-                x: {
-                    max: 5,
-                    min: 0,
-                    ticks: { color: 'var(--grey)' },
-                    grid: { color: '#eee' }
-                },
-                y: {
-                    ticks: { color: 'var(--grey)' },
-                    grid: { display: false }
-                }
+                x: { max: 5, min: 0, ticks: { color: 'var(--grey)', stepSize: 1 }, grid: { color: 'var(--chart-grid-color, #eee)' } },
+                y: { ticks: { color: 'var(--grey)' }, grid: { display: false } }
             },
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return ` Rating: ${context.raw?.toFixed(1) || 0} ★`;
-                        }
-                    }
-                }
+                tooltip: { callbacks: { label: ctx => ` Rating: ${(ctx.raw || 0).toFixed(1)} ★` } }
             }
         }
     });
@@ -1167,45 +1042,61 @@ function updateTopRatedChart(topRatedData) {
 
 // --- Utility and Event Listeners Setup ---
 
-// Function to switch tabs programmatically
 function switchTab(tabId) {
-     const targetTab = document.querySelector(`.tab[data-tab="${tabId}"]`);
-     if (targetTab && !targetTab.classList.contains('active')) {
-         targetTab.click(); // Simulate click to trigger listener
-     }
-}
-
-// Handle file input change for immediate feedback
-function handleFileChange(fileInput) {
-    const fileUploadStatus = document.getElementById('file-upload-status');
-    if (!fileUploadStatus) return; // Exit if status element doesn't exist
-
-    if (fileInput.files.length > 0) {
-        const fileName = fileInput.files[0].name;
-        const fileSize = (fileInput.files[0].size / 1024 / 1024).toFixed(2); // Size in MB
-        // Basic validation (e.g., check file type/size)
-        if (fileSize > 5) { // Example: Limit to 5MB
-            fileUploadStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i> File too large: ${fileName} (${fileSize}MB). Max 5MB.`;
-            fileUploadStatus.className = 'danger';
-            fileInput.value = ''; // Clear the input
-            return;
+    console.log(`switchTab: Switching to tab "${tabId}"`);
+    const targetTabButton = document.querySelector(`.tab[data-tab="${tabId}"]`);
+    const targetTabContent = document.getElementById(tabId);
+    
+    if (targetTabButton && targetTabContent) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        targetTabButton.classList.add('active');
+        targetTabContent.classList.add('active');
+        if (tabId === 'recipe-stats' && typeof LOG_STATS_DATA !== 'undefined') {
+            console.log("switchTab: Stats tab activated, calling updateStats().");
+            updateStats();
         }
-        if (!fileInput.files[0].type.startsWith('image/')) {
-             fileUploadStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: var(--danger-color);"></i> Invalid file type: ${fileName}. Please upload an image.`;
-             fileUploadStatus.className = 'danger';
-             fileInput.value = ''; // Clear the input
-             return;
-        }
-
-        fileUploadStatus.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> File selected: ${fileName} (${fileSize}MB)`;
-        fileUploadStatus.className = 'success';
     } else {
-        fileUploadStatus.textContent = '';
-        fileUploadStatus.className = '';
+        console.warn(`switchTab: Could not switch to tab. Button or content not found for tabId "${tabId}"`);
     }
 }
 
-// Share recipe via different platforms
+function handleFileChange(fileInput) {
+    const fileUploadStatus = document.getElementById('file-upload-status');
+    if (!fileUploadStatus) return; 
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2); 
+        
+        if (fileSize > 5) { 
+            fileUploadStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: var(--danger-text);"></i> File too large: ${fileName} (${fileSize}MB). Max 5MB.`;
+            fileUploadStatus.className = 'error';
+            fileInput.value = ''; 
+            return;
+        }
+        if (!file.type.startsWith('image/')) {
+             fileUploadStatus.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: var(--danger-text);"></i> Invalid file type: ${fileName}. Please upload an image.`;
+             fileUploadStatus.className = 'error';
+             fileInput.value = ''; 
+             return;
+        }
+        fileUploadStatus.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-text);"></i> File selected: ${fileName} (${fileSize}MB)`;
+        fileUploadStatus.className = 'success';
+    } else {
+        const form = document.getElementById('recipe-form');
+        if (form && form.dataset.editingId) {
+            const recipe = currentRecipes.find(r => r.id == form.dataset.editingId);
+            fileUploadStatus.textContent = recipe && recipe.image ? `Current image retained. Choose a new file to replace.` : 'No image. Choose a file to upload.';
+            fileUploadStatus.className = recipe && recipe.image ? 'info' : '';
+        } else {
+            fileUploadStatus.textContent = '';
+            fileUploadStatus.className = '';
+        }
+    }
+}
+
 function shareRecipe(platform) {
     const shareRecipeSelect = document.getElementById('share-recipe');
     if (!shareRecipeSelect) return;
@@ -1215,7 +1106,6 @@ function shareRecipe(platform) {
         alert('Please select a recipe to share first.');
         return;
     }
-    // Find recipe in local cache for sharing details
     const recipe = currentRecipes.find(r => r.id == recipeId);
     if (!recipe) {
         alert('Selected recipe details not found.');
@@ -1223,31 +1113,30 @@ function shareRecipe(platform) {
     }
 
     const shareText = `Check out my recipe for "${recipe.name}"! Prep time: ${recipe.time} mins. Category: ${recipe.category}.`;
-    const appUrl = window.location.origin; // Base URL of the app
-    // Construct a more specific URL if you have public recipe pages later
-    // const recipeUrl = `${appUrl}/recipe/${recipe.id}`; // Example
-    const recipeUrl = appUrl; // For now, just link to the app
+    const appUrl = window.location.origin; 
+    const recipePageUrl = `${appUrl}/view_recipe/${recipe.id}`; 
 
     const shareSubject = `My KitchenLog Recipe: ${recipe.name}`;
     let ingredientsList = Array.isArray(recipe.ingredients) ? recipe.ingredients.join('\n- ') : recipe.ingredients;
-    const shareBody = `${shareText}\n\nIngredients:\n- ${ingredientsList}\n\nInstructions:\n${recipe.instructions}\n\nShared from my KitchenLog: ${recipeUrl}`;
+    const shareBody = `${shareText}\n\nIngredients:\n- ${ingredientsList}\n\nInstructions:\n${recipe.instructions || 'Not specified.'}\n\nView on KitchenLog: ${recipePageUrl}`;
     let shareUrl = '';
 
     switch (platform) {
         case 'facebook':
-            // FB Sharer needs a real URL to scrape, using appUrl for now
-            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipeUrl)}"e=${encodeURIComponent(shareText)}`;
+            shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipePageUrl)}"e=${encodeURIComponent(shareText)}`;
             break;
         case 'twitter':
-            shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(recipeUrl)}`;
+            shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText + " " + recipePageUrl)}`;
             break;
         case 'whatsapp':
-            // WhatsApp Web/App link
-            shareUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' Shared from KitchenLog: ' + recipeUrl)}`;
+            shareUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' View on KitchenLog: ' + recipePageUrl)}`;
             break;
         case 'email':
             shareUrl = `mailto:?subject=${encodeURIComponent(shareSubject)}&body=${encodeURIComponent(shareBody)}`;
             break;
+        case 'copy': 
+            copyRecipeLinkToClipboard(recipePageUrl, recipe.name);
+            return; 
         default: return;
     }
     if (shareUrl) {
@@ -1255,37 +1144,52 @@ function shareRecipe(platform) {
     }
 }
 
-function closeAlert() {
-    const alertBox = document.querySelector('.custom-alert');
-    if (alertBox) {
-        alertBox.remove();
+function copyRecipeLinkToClipboard(url, recipeName) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+            .then(() => {
+                showTemporaryStatusMessage(`Link to "${recipeName}" copied to clipboard!`, 'success');
+            })
+            .catch(err => {
+                console.error('Failed to copy link using Clipboard API:', err);
+                showTemporaryStatusMessage('Failed to copy link automatically.', 'danger');
+                alert(`Could not copy link automatically. Link for "${recipeName}": ${url}. Please copy manually.`);
+            });
+    } else { 
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        textArea.style.position = "fixed"; 
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showTemporaryStatusMessage(`Link to "${recipeName}" copied! (Legacy method)`, 'success');
+        } catch (err) {
+            console.error('Failed to copy link using execCommand:', err);
+            showTemporaryStatusMessage('Failed to copy link.', 'danger');
+            alert(`Could not copy link. Link for "${recipeName}": ${url}. Please copy manually.`);
+        }
+        document.body.removeChild(textArea);
     }
 }
 
-// Shared Recipes Popup Helper Functions
-async function fetchSharedRecipes() {
-    try {
-        const response = await fetch('/api/shared_recipes/my');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
-    } catch (error) {
-        console.error("Error fetching shared recipes:", error);
-        return [];
-    }
-}
 
-async function fetchSharedRecipes() {
+async function fetchSharedRecipes() { 
     try {
-        const response = await fetch('/api/shared_recipes/my');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
+        console.log("fetchSharedRecipes: Fetching /api/shared_recipes/my");
+        const sharedData = await fetchApi('/api/shared_recipes/my');
+        console.log("fetchSharedRecipes: Received data:", sharedData);
+        return sharedData;
     } catch (error) {
-        console.error("Error fetching shared recipes:", error);
-        return [];
+        const sharedRecipesList = document.getElementById('shared-recipes-list');
+        const noRecipesMessage = document.getElementById('no-recipes-message');
+        if (sharedRecipesList) sharedRecipesList.innerHTML = ''; 
+        if (noRecipesMessage) {
+            noRecipesMessage.textContent = 'Could not load shared recipes. Please try again later.';
+            noRecipesMessage.style.display = 'block';
+        }
+        return []; 
     }
 }
 
@@ -1293,324 +1197,304 @@ function displaySharedRecipes() {
     const sharedRecipesList = document.getElementById('shared-recipes-list');
     const noRecipesMessage = document.getElementById('no-recipes-message');
 
-    // Show loading state
+    if (!sharedRecipesList || !noRecipesMessage) {
+        console.error("displaySharedRecipes: Critical elements not found (shared-recipes-list or no-recipes-message).");
+        return;
+    }
+
     sharedRecipesList.innerHTML = '<p class="loading-message" style="text-align: center; padding: 20px; color: var(--grey);"><i class="fas fa-spinner fa-spin"></i> Loading shared recipes...</p>';
-    noRecipesMessage.style.display = 'none'; // Hide no recipes message while loading
+    noRecipesMessage.style.display = 'none'; 
 
     fetchSharedRecipes().then(shared_recipes => {
-        sharedRecipesList.innerHTML = ''; // Clear loading message
+        sharedRecipesList.innerHTML = ''; 
 
-        if (shared_recipes.length === 0) {
+        if (!Array.isArray(shared_recipes)) {
+            console.error("displaySharedRecipes: fetchSharedRecipes did not return an array.", shared_recipes);
+            noRecipesMessage.textContent = 'Error: Invalid data received for shared recipes.';
             noRecipesMessage.style.display = 'block';
-            // sharedRecipesList remains empty if no recipes
-        } else {
+            return;
+        }
+
+        if (shared_recipes.length === 0 && !noRecipesMessage.textContent.toLowerCase().includes("could not load")) { 
+            noRecipesMessage.textContent = "You currently have no recipes shared with you.";
+            noRecipesMessage.style.display = 'block';
+        } else if (shared_recipes.length > 0) {
             noRecipesMessage.style.display = 'none';
-            
             shared_recipes.forEach(shared_recipe => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'shared-recipe-item';
-                
-                // Format date for better readability
                 const dateShared = new Date(shared_recipe.date_shared);
-                const formattedDate = dateShared.toLocaleDateString(undefined, {
-                    year: 'numeric', month: 'short', day: 'numeric'
-                });
+                const formattedDate = dateShared.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+                // Determine profile image or default icon
+                let sharerImageHTML;
+                if (shared_recipe.sharer_profile_image_url) {
+                    sharerImageHTML = `<img src="${shared_recipe.sharer_profile_image_url}" alt="${shared_recipe.sharer_name}" class="shared-recipe-sharer-avatar">`;
+                } else {
+                    sharerImageHTML = `<div class="shared-recipe-sharer-avatar default"><i class="fas fa-user"></i></div>`;
+                }
 
                 itemDiv.innerHTML = `
                     <div class="shared-recipe-icon">
-                        <i class="fas fa-utensils"></i>
+                        ${sharerImageHTML}
                     </div>
                     <div class="shared-recipe-details">
                         <h4 class="shared-recipe-name">${shared_recipe.recipe_name}</h4>
-                        <p class="shared-recipe-meta">
-                            Shared by <strong>${shared_recipe.sharer_name}</strong> on ${formattedDate}
-                        </p>
+                        <p class="shared-recipe-meta">Shared by <strong>${shared_recipe.sharer_name}</strong> on ${formattedDate}</p>
                     </div>
-                    <div class="shared-recipe-action">
-                        <i class="fas fa-chevron-right"></i>
-                    </div>
-                `;
+                    <div class="shared-recipe-action"><i class="fas fa-chevron-right"></i></div>`;
                 
                 itemDiv.addEventListener('click', () => {
-                    window.open(`./view_recipe/${shared_recipe.recipe_id}`, '_blank');
+                    // Link to view_recipe page (already correct)
+                    window.location.href = `/view_recipe/${shared_recipe.recipe_id}`;
                 });
                 sharedRecipesList.appendChild(itemDiv);
             });
+        } else if (shared_recipes.length === 0 && noRecipesMessage.textContent.toLowerCase().includes("could not load")) {
+            noRecipesMessage.style.display = 'block';
         }
-    }).catch(error => {
-        console.error('Error fetching shared recipes:', error);
-        sharedRecipesList.innerHTML = ''; // Clear loading message on error
-        noRecipesMessage.textContent = 'Could not load shared recipes.';
+    }).catch(error => { 
+        console.error('displaySharedRecipes: CATCH BLOCK - Error processing shared recipes:', error);
+        sharedRecipesList.innerHTML = ''; 
+        noRecipesMessage.textContent = 'An unexpected error occurred while displaying shared recipes.';
         noRecipesMessage.style.display = 'block';
     });
 }
 
 
-// static/script.js
+// --- Whitelist Management Functions (New) ---
+async function searchUsers(query) {
+    const suggestionsList = document.getElementById('suggestions');
+    if (query.length < 1) { 
+        suggestionsList.innerHTML = '';
+        suggestionsList.style.display = 'none';
+        return;
+    }
+    try {
+        const users = await fetchApi(`/users/search?q=${encodeURIComponent(query)}`);
+        suggestionsList.innerHTML = '';
+        if (users.length > 0) {
+            users.forEach(username => {
+                const li = document.createElement('li');
+                li.textContent = username;
+                li.addEventListener('click', () => {
+                    document.getElementById('user-search').value = username;
+                    suggestionsList.style.display = 'none';
+                    suggestionsList.innerHTML = '';
+                });
+                suggestionsList.appendChild(li);
+            });
+            suggestionsList.style.display = 'block';
+        } else {
+            suggestionsList.innerHTML = '<li>No users found</li>'; // Indicate no users
+            suggestionsList.style.display = 'block';
+        }
+    } catch (error) {
+        console.error("Error searching users:", error);
+        suggestionsList.innerHTML = '<li>Error loading suggestions</li>';
+        suggestionsList.style.display = 'block';
+    }
+}
 
-// ... (Global variables and functions declared above this block) ...
-// e.g., topRecipesChart, frequencyChart, currentRecipes,
-// fetchRecipes, addRecipeToServer, deleteRecipeFromServer,
-// renderRecipeCard, loadRecipes, checkShareDropdown, handleFormSubmit,
-// saveRecipe, postSaveActions, deleteRecipe, editRecipe, cancelEdit,
-// updateStats, updateTopRecipesChart, updateMonthlyFrequencyChart,
-// switchTab, handleFileChange, shareRecipe, closeAlert, etc.
+async function handleAddToWhitelist() {
+    const recipeId = document.getElementById('share-recipe').value;
+    const usernameToWhitelist = document.getElementById('user-search').value.trim();
+    const responseMessageDiv = document.getElementById('response-message');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (!recipeId) {
+        responseMessageDiv.textContent = 'Please select a recipe first.';
+        responseMessageDiv.className = 'error';
+        return;
+    }
+    if (!usernameToWhitelist) {
+        responseMessageDiv.textContent = 'Please enter or select a username to add.';
+        responseMessageDiv.className = 'error';
+        return;
+    }
+    if (!csrfToken) {
+        responseMessageDiv.textContent = 'Security token missing. Please refresh.';
+        responseMessageDiv.className = 'error';
+        console.error("CSRF token not found for whitelist action.");
+        return;
+    }
+
+    responseMessageDiv.textContent = 'Processing...';
+    responseMessageDiv.className = 'info';
+
+    try {
+        const response = await fetchApi(`/recipes/${recipeId}/whitelist`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ username: usernameToWhitelist })
+        });
+
+        responseMessageDiv.textContent = response.message || 'Action completed.';
+        responseMessageDiv.className = 'success';
+        document.getElementById('user-search').value = ''; 
+        // Optionally, if you store whitelist on recipe object in currentRecipes, update it
+        // and re-render something, or fetch shared users for this recipe.
+        // For now, a success message is sufficient.
+    } catch (error) {
+        console.error("Error adding to whitelist:", error);
+        const coreErrorMessage = error.message.includes("HTTP error!") ?
+            error.message.substring(error.message.indexOf("- ") + 2) :
+            error.message;
+        responseMessageDiv.textContent = `Error: ${coreErrorMessage}`;
+        responseMessageDiv.className = 'error';
+    }
+}
 
 
 // --- Initial Setup ---
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("script.js: DOMContentLoaded event FIRED.");
 
-    // Tab switching
-    const tabs = document.querySelectorAll('.tab'); // Get all tab elements
-    const tabContents = document.querySelectorAll('.tab-content'); // Get all content elements
+    if (typeof CURRENT_USER_ID === 'undefined') console.warn("script.js DOMContentLoaded: CURRENT_USER_ID is undefined.");
+    if (typeof LOG_STATS_DATA === 'undefined') console.warn("script.js DOMContentLoaded: LOG_STATS_DATA is undefined.");
+
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    console.log(`script.js DOMContentLoaded: Found ${tabs.length} tabs and ${tabContents.length} tab contents.`);
 
     tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-             console.log('Tab clicked:', tab.getAttribute('data-tab')); // For debugging
-
-            // If the tab is disabled, do nothing
-            if (tab.classList.contains('disabled')) return;
-
-            const tabId = tab.getAttribute('data-tab'); // Get the ID of the content to show
-
-            // --- Manage .active class on TABS ---
-            tabs.forEach(t => t.classList.remove('active')); // Remove active from ALL tabs
-            tab.classList.add('active'); // Add active to the CLICKED tab
-
-            // --- Manage .active class on TAB CONTENTS ---
-            tabContents.forEach(content => {
-                 content.classList.remove('active'); // Remove active from ALL content divs - HIDES THEM
-            });
-
-            // Find the specific content div to activate
-            const activeContent = document.getElementById(tabId);
-             if (activeContent) {
-                 activeContent.classList.add('active'); // Add active ONLY to the target content div - SHOWS IT
-
-                 // Update stats only when that specific tab is viewed
-                 if (tabId === 'recipe-stats') { // Ensure this ID matches your HTML
-                     console.log('Updating stats for tab:', tabId); // For debugging
-                     updateStats(); // Populate stats and render charts
-                 }
-             } else {
-                  console.warn(`Tab content with ID "${tabId}" not found.`);
-             }
-        });
-    }); // End of tabs.forEach
-
-    // File upload trigger & feedback
-    const fileUploadArea = document.getElementById('file-upload');
-    if (fileUploadArea) { // Check if the element exists (it's inside a tab)
-        const fileInputElement = document.getElementById('recipe-image');
-        if (fileInputElement) { // Also check if input exists
-            fileUploadArea.addEventListener('click', () => fileInputElement.click());
-
-            // Drag and Drop Handling
-            fileUploadArea.addEventListener('dragover', (event) => {
-                event.preventDefault(); // Necessary to allow drop
-                fileUploadArea.classList.add('dragging'); // Add class for styling
-            });
-            fileUploadArea.addEventListener('dragleave', () => {
-                 fileUploadArea.classList.remove('dragging'); // Remove class
-            });
-            fileUploadArea.addEventListener('drop', (event) => {
-                event.preventDefault();
-                fileUploadArea.classList.remove('dragging');
-                if (event.dataTransfer.files.length > 0) {
-                    fileInputElement.files = event.dataTransfer.files; // Assign dropped files
-                    handleFileChange(fileInputElement); // Update UI
-                }
-            });
-            fileInputElement.addEventListener('change', () => handleFileChange(fileInputElement));
+        tab.addEventListener('click', () => switchTab(tab.getAttribute('data-tab')));
+    });
+    if (!document.querySelector('.tab.active') && tabs.length > 0) {
+        const initialTab = window.location.hash.substring(1) || tabs[0].getAttribute('data-tab');
+        if (document.getElementById(initialTab) && document.querySelector(`.tab[data-tab="${initialTab}"]`)) {
+            switchTab(initialTab);
+        } else {
+            switchTab(tabs[0].getAttribute('data-tab'));
         }
     }
 
-    // Recipe form submission listener
+
     const recipeForm = document.getElementById('recipe-form');
-    if (recipeForm) {
-        recipeForm.addEventListener('submit', handleFormSubmit);
-        // Note: The cancelEdit function adds/removes a cancel button dynamically
-    }
+    if (recipeForm) recipeForm.addEventListener('submit', handleFormSubmit);
 
-    // Search functionality
-    const searchInput = document.getElementById('recipe-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase().trim();
-            const recipeListContainer = document.getElementById('recipe-list');
-            if (!recipeListContainer) return; // Exit if list container not found
-
-            let visibleCount = 0;
-            let noResultMessage = recipeListContainer.querySelector('.no-search-results');
-
-             // Remove existing no-results message before filtering
-             if (noResultMessage) noResultMessage.remove();
-
-            // Ensure currentRecipes is populated before searching
-            if (currentRecipes && currentRecipes.length > 0) {
-                currentRecipes.forEach(recipe => {
-                    const card = recipeListContainer.querySelector(`.recipe-card[data-id='${recipe.id}']`);
-                    if (!card) return; // Skip if card not rendered yet
-
-                    const title = recipe.name ? recipe.name.toLowerCase() : '';
-                    const ingredientsText = (Array.isArray(recipe.ingredients) ? recipe.ingredients.join(', ') : '').toLowerCase();
-                    const categoryText = recipe.category ? recipe.category.toLowerCase() : '';
-                    const isMatch = title.includes(searchTerm) || ingredientsText.includes(searchTerm) || categoryText.includes(searchTerm);
-
-                    card.style.display = isMatch ? '' : 'none';
-                    if (isMatch) visibleCount++;
-                });
-            } else {
-                 // Handle case where recipes haven't loaded yet or there are none
-                 visibleCount = 0;
-            }
-
-
-            // Add "no results" message if needed AFTER filtering
-            if (visibleCount === 0 && currentRecipes && currentRecipes.length > 0 && searchTerm) { // Only show if searching and recipes exist
-                noResultMessage = document.createElement('p');
-                noResultMessage.className = 'no-search-results';
-                noResultMessage.style.cssText = 'grid-column: 1 / -1; text-align: center; color: var(--grey); margin-top: 15px;';
-                noResultMessage.textContent = `No recipes found matching "${searchTerm}".`;
-                recipeListContainer.appendChild(noResultMessage);
-            } else if (visibleCount === 0 && (!currentRecipes || currentRecipes.length === 0) && !searchTerm) {
-                 // Handle case where list is empty initially and search is empty (or recipes haven't loaded)
-                 // Avoid adding message if loading message is present
-                 if (!recipeListContainer.querySelector('p:not(.no-search-results)')) {
-                     recipeListContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--grey);">You haven\'t added any recipes yet. Use the "Add Recipe" tab!</p>';
-                 }
-            }
-        }); // End of search input listener
-    }
-
-    // Share recipe selection listener
+    const recipeImageInput = document.getElementById('recipe-image');
+    if (recipeImageInput) recipeImageInput.addEventListener('change', () => handleFileChange(recipeImageInput));
+    
     const shareRecipeSelect = document.getElementById('share-recipe');
     if (shareRecipeSelect) {
-        shareRecipeSelect.addEventListener('change', function() {
-            displaySharePreview(this.value); // Ensure displaySharePreview exists
-        });
+        shareRecipeSelect.addEventListener('change', function() { displaySharePreview(this.value); });
+        // Initial call to displaySharePreview will be handled after loadRecipes completes and populates currentRecipes
     }
+    
+    // Chart toggle buttons have onclick attributes in HTML, e.g., onclick="toggleChart(event, 'top-recipes')"
 
-    // Initial load of recipes (for the logged-in user)
-    // Check if the recipe list container exists before loading
     if (document.getElementById('recipe-list')) {
-        loadRecipes(); // This function updates currentRecipes and renders cards
-    }
-
-    // share recipe user search listeners
-    const input = document.getElementById("user-search");
-    const suggestions = document.getElementById("suggestions");
-    let debounce;
-
-    input.addEventListener("input", () => {
-    const q = input.value.trim();
-    clearTimeout(debounce);
-    if (q.length < 2) {
-        suggestions.innerHTML = "";
-        return;
-    }
-    debounce = setTimeout(() => {
-        fetch(`/users/search?q=${encodeURIComponent(q)}`)
-        .then(res => res.json())
-        .then(usernames => {
-            suggestions.innerHTML = "";
-            usernames.forEach(username => {
-            const li = document.createElement("li");
-            // display the string itself
-            li.textContent = username;
-            li.addEventListener("click", () => {
-                // fill the input with that string
-                input.value = username;
-                suggestions.innerHTML = "";
-            });
-            suggestions.appendChild(li);
-            });
-        })
-        .catch(console.error);
-    }, 300);
-    });
-
-    document.addEventListener("click", e => {
-    if (!input.contains(e.target)) {
-        suggestions.innerHTML = "";
-    }
-    });
-
-    const whitelist_button = document.getElementById("add-to-whitelist-btn");
-    whitelist_button.addEventListener("click", () => {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        const recipe_id = document.getElementById('share-recipe').value;
-        const username = input.value.trim();
-
-        if (!input.value) {
-            alert("Please select a user first.");
-            return;
-        }
-        console.log(input.value);
-        
-        fetch(`/recipes/${recipe_id}/whitelist`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken
-            },
-            body: JSON.stringify({ username: username })
-        })
-        .then(res => res.json())
-        .then(data => {
-            // Get the message from the response
-            const message = data.message;
-            
-            // Display the message to the user
-            document.getElementById('response-message').textContent = message;
-            input.value = "";
-        })
-        .catch(err => {
-            console.error("Error adding to whitelist:", err);
-            alert("Error: Failed to add user to whitelist.");
+        console.log("script.js DOMContentLoaded: recipe-list found, calling loadRecipes().");
+        loadRecipes().then(() => {
+            // After recipes are loaded, then call displaySharePreview for the initially selected recipe (if any)
+            if (shareRecipeSelect) {
+                displaySharePreview(shareRecipeSelect.value);
+            }
         });
+    } else {
+        console.warn("script.js DOMContentLoaded: recipe-list element NOT found. Recipes will not be loaded for this page.");
+    }
 
-        fetch('/api/shared_recipes', {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrfToken
-            },
-            body: JSON.stringify({
-                receiver_name: username,
-                recipe_id: recipe_id,
-            })
-        });
-
-    });
-
-    // Mailbox popup initialization
-    const mailboxIcon = document.querySelector('.mailbox-icon');
+    const mailboxIcon = document.querySelector('.mailbox-icon'); // Changed from #mailbox-icon if it's a class
     const mailboxPopup = document.getElementById('mailbox-popup');
     const closePopup = document.getElementById('close-popup');
 
-    mailboxIcon.addEventListener('click', function(e) {
-        e.stopPropagation();
-        mailboxPopup.style.display = 'block';
-        displaySharedRecipes();
-    });
-
-    closePopup.addEventListener('click', function() {
-        mailboxPopup.style.display = 'none';
-    });
-
-    document.addEventListener('click', function(e) {
-        if (!mailboxPopup.contains(e.target) && e.target !== mailboxIcon) {
-            mailboxPopup.style.display = 'none';
-        }
-    });
+    if (mailboxIcon && mailboxPopup && closePopup) { 
+        mailboxIcon.addEventListener('click', function(e) {
+            e.stopPropagation(); 
+            const isVisible = mailboxPopup.style.display === 'block';
+            mailboxPopup.style.display = isVisible ? 'none' : 'block';
+            if (!isVisible) displaySharedRecipes();
+        });
+        closePopup.addEventListener('click', () => mailboxPopup.style.display = 'none');
+        document.addEventListener('click', function(e) {
+            if (mailboxPopup.style.display === 'block' && !mailboxPopup.contains(e.target) && e.target !== mailboxIcon && !mailboxIcon.contains(e.target)) {
+                mailboxPopup.style.display = 'none';
+            }
+        });
+    } else {
+        console.warn("Mailbox elements not found. Mailbox feature may not work.");
+    }
     
-    // MISCELLANEOUS STUFF  
-    document.getElementById('recipe-time').addEventListener('keypress', function(e) {
-        // Allow only numbers and prevent other characters
-        if (!/\d/.test(String.fromCharCode(e.charCode))) {
-            e.preventDefault();
-        }
-    });
+    const recipeTimeInput = document.getElementById('recipe-time');
+    if (recipeTimeInput) { 
+        recipeTimeInput.addEventListener('keypress', function(e) {
+            if (!/\d/.test(String.fromCharCode(e.which || e.keyCode))) e.preventDefault();
+        });
+        recipeTimeInput.addEventListener('input', e => e.target.value = e.target.value.replace(/[^0-9]/g, ''));
+    }
 
-}); // End DOMContentLoaded
+    // Whitelist User Search Event Listener (New)
+    const userSearchInput = document.getElementById('user-search');
+    if (userSearchInput) {
+        let searchTimeout;
+        userSearchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchUsers(userSearchInput.value.trim());
+            }, 300); 
+        });
+        document.addEventListener('click', function(e) {
+            const suggestionsList = document.getElementById('suggestions');
+            if (suggestionsList && !userSearchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+                suggestionsList.style.display = 'none';
+            }
+        });
+    }
+
+    // Add to Whitelist Button Event Listener (New)
+    const addToWhitelistBtn = document.getElementById('add-to-whitelist-btn');
+    if (addToWhitelistBtn) {
+        addToWhitelistBtn.addEventListener('click', handleAddToWhitelist);
+    }
+     // Initial state for whitelist controls based on whether a recipe is selected
+    if (shareRecipeSelect && userSearchInput && addToWhitelistBtn) {
+        if (!shareRecipeSelect.value) {
+            userSearchInput.disabled = true;
+            addToWhitelistBtn.disabled = true;
+        }
+    }
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        #response-message.success { color: var(--success-text); margin-top: 10px; font-weight: bold; }
+        #response-message.error { color: var(--danger-text); margin-top: 10px; font-weight: bold; }
+        #response-message.info { color: var(--info-text); margin-top: 10px; }
+        #suggestions {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ddd;
+            z-index: 100;
+            max-height: 150px;
+            overflow-y: auto;
+            /* Adjust width relative to its container or the input field */
+            left: 0; /* Or align with input */
+            right: 0; /* Or align with input */
+            margin-top: 0; /* Position directly below input */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        /* Ensure the parent of #user-search and #suggestions has position: relative; if needed */
+        .form-group /* or a specific wrapper for #user-search */ {
+            position: relative; 
+        }
+        #suggestions li {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        #suggestions li:last-child {
+            border-bottom: none;
+        }
+        #suggestions li:hover {
+            background-color: #f5f5f5;
+        }
+    `;
+    document.head.appendChild(style);
+
+    console.log("script.js: DOMContentLoaded setup COMPLETED.");
+});
